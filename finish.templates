@@ -1,5 +1,9 @@
 Template: finish-install/reboot_in_progress
 Type: note
 Description: Installation complete
- After you press Continue, the computer will power off. Disconnect the
+ After you press Finish, the computer will power off. Disconnect the
  installation disk from the computer before turning it on again.
+
+Template: debconf/button-continue
+Type: text
+Description: Finish
