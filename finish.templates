@@ -1,0 +1,7 @@
+Template: finish-install/reboot_in_progress
+Type: note
+Description: Installation complete
+ The installation completed successfully.
+ .
+ After you press Continue, the computer will power off. Disconnect the
+ installation disk from the computer before turning it on again.

@@ -7,7 +7,7 @@ set -euo pipefail
 
 REPO_RAW=${REPO_RAW:-https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main}
 URL=https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/
-FILES=(preseed.cfg kvm-setup.sh kvm-setup.service)
+FILES=(preseed.cfg kvm-setup.sh kvm-setup.service finish.templates)
 
 # Work next to the script; when run via curl | bash, work in ~/kvm-iso
 SELF=$(readlink -f "${BASH_SOURCE[0]:-}" 2>/dev/null || true)
@@ -53,21 +53,32 @@ OUT=$HOST-$SRC
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
-# Put hostname and domain into a copy of preseed.cfg
-sed -e "s/kvm01/$HOST/g" -e "s/example\.com/$DOMAIN/" preseed.cfg > "$WORK/preseed.cfg"
+# Files added to the installer initrd
+EXTRA="$WORK/initrd-extra"
+mkdir -p "$EXTRA/usr/lib/finish-install.d" "$EXTRA/usr/share/kvm-host-iso"
+# preseed.cfg with the hostname and domain
+sed -e "s/kvm01/$HOST/g" -e "s/example\.com/$DOMAIN/" preseed.cfg > "$EXTRA/preseed.cfg"
+# Custom text for the "Installation complete" screen, loaded just before 20final-message shows it
+cp finish.templates "$EXTRA/usr/share/kvm-host-iso/finish.templates"
+cat > "$EXTRA/usr/lib/finish-install.d/19kvm-final-message" <<'HOOK'
+#!/bin/sh
+. /usr/share/debconf/confmodule
+db_x_loadtemplatefile /usr/share/kvm-host-iso/finish.templates d-i || true
+HOOK
+chmod 755 "$EXTRA/usr/lib/finish-install.d/19kvm-final-message"
 
-# Append preseed.cfg to the initrd of the text and graphical installers
+# Append the extra files to the initrd of the text and graphical installers
 MAP=()
 for i in install.amd/initrd.gz install.amd/gtk/initrd.gz; do
   f="$WORK/$(echo "$i" | tr / _)"
   xorriso -osirrox on -indev "$SRC" -extract "/$i" "$f" 2>/dev/null
   chmod u+w "$f"
-  (cd "$WORK" && echo preseed.cfg | cpio -o -H newc -R 0:0 --quiet | gzip) >> "$f"
+  (cd "$EXTRA" && find . -mindepth 1 | cpio -o -H newc -R 0:0 --quiet | gzip) >> "$f"
   MAP+=(-map "$f" "/$i")
 done
 
-# Boot menus: start "Install" automatically after 3 s and pass locale/keymap to the kernel,
-# so the language and keyboard questions are answered before preseed.cfg is read
+# Boot menus: preselect "Install" without a timeout (nothing starts if the disk is left attached)
+# and pass locale/keymap to the kernel, so the language and keyboard questions are answered before preseed.cfg is read
 BOOTARGS="locale=en_US.UTF-8 keymap=us"
 for i in boot/grub/grub.cfg isolinux/isolinux.cfg isolinux/txt.cfg isolinux/gtk.cfg; do
   f="$WORK/$(echo "$i" | tr / _)"
@@ -76,9 +87,9 @@ for i in boot/grub/grub.cfg isolinux/isolinux.cfg isolinux/txt.cfg isolinux/gtk.
   case $i in
     boot/grub/grub.cfg)
       sed -i "s#\(/install.amd/vmlinuz\)#\1 $BOOTARGS#" "$f"
-      printf '\nset timeout=3\nset timeout_style=menu\nset default="Install"\n' >> "$f" ;;
+      printf '\nset timeout=-1\nset default="Install"\n' >> "$f" ;;
     isolinux/isolinux.cfg)
-      if grep -q '^timeout' "$f"; then sed -i 's/^timeout .*/timeout 30/' "$f"; else echo 'timeout 30' >> "$f"; fi ;;
+      if grep -q '^timeout' "$f"; then sed -i 's/^timeout .*/timeout 0/' "$f"; else echo 'timeout 0' >> "$f"; fi ;;
     isolinux/txt.cfg|isolinux/gtk.cfg)
       sed -i "s#^\(\s*append \)#\1$BOOTARGS #" "$f"
       # Make text "Install" the default entry in the BIOS menu

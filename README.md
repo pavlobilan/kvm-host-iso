@@ -38,7 +38,7 @@ cd kvm-host-iso
 ## Install
 
 1. Attach the ISO to the VM as a CD, or write it to a USB stick (Rufus: DD mode, or `dd`).
-2. Boot from it and choose **Install** or **Graphical install**.
+2. Boot from it and press Enter: **Install** is preselected. The menu waits without a timeout, so a disk left attached does not start a new installation.
 3. Enter the username and the password twice, then select the system disk. Installation continues unattended until the "Installation complete" screen; press **Continue** and the server powers off.
 4. Detach the ISO (or change the boot order) and power the server on.
 
@@ -78,3 +78,4 @@ Then open `https://<server-IP>:9090`, log in and turn on administrative access.
 | `preseed.cfg` | Installer answers |
 | `kvm-setup.sh` | First-boot setup, installed as `/usr/local/sbin/kvm-setup` |
 | `kvm-setup.service` | Runs `kvm-setup` once on tty1 |
+| `finish.templates` | Text of the "Installation complete" screen |
