@@ -46,7 +46,7 @@ SRC=$(wget -qO- "$URL" | grep -o 'debian-[0-9.]*-amd64-netinst\.iso' | head -n1)
 [ -n "$SRC" ] || { echo "Could not find netinst at $URL" >&2; exit 1; }
 [ -f "$SRC" ] || wget "$URL$SRC"
 wget -qO- "${URL}SHA256SUMS" | grep " $SRC\$" | sha256sum -c -
-OUT=${SRC%.iso}-$HOST.iso
+OUT=$HOST-$SRC
 
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
