@@ -40,7 +40,7 @@ cd kvm-host-iso
 1. Attach the ISO to the VM as a CD, or write it to a USB stick (Rufus: DD mode, or `dd`).
 2. Boot from it and press Enter: **Install** is preselected. The menu waits without a timeout, so a disk left attached does not start a new installation.
 3. Enter the username and the password twice, then select the system disk. Installation continues unattended until the "Installation complete" screen; press **Finish** and the server powers off.
-4. If the installation disk is still attached, remove it (the installer ejects the CD, and most hypervisors detach the ISO at that point). Power the server on.
+4. Power the server on. The installer ejects the CD at the end; remove a USB stick if you used one.
 
 ## First boot
 
