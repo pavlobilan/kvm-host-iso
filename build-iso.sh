@@ -64,6 +64,27 @@ for i in install.amd/initrd.gz install.amd/gtk/initrd.gz; do
   MAP+=(-map "$f" "/$i")
 done
 
+# Boot menus: start "Install" automatically after 3 s and pass locale/keymap to the kernel,
+# so the language and keyboard questions are answered before preseed.cfg is read
+BOOTARGS="locale=en_US.UTF-8 keymap=us"
+for i in boot/grub/grub.cfg isolinux/isolinux.cfg isolinux/txt.cfg isolinux/gtk.cfg; do
+  f="$WORK/$(echo "$i" | tr / _)"
+  xorriso -osirrox on -indev "$SRC" -extract "/$i" "$f" 2>/dev/null || continue
+  chmod u+w "$f"
+  case $i in
+    boot/grub/grub.cfg)
+      sed -i "s#\(/install.amd/vmlinuz\)#\1 $BOOTARGS#" "$f"
+      printf '\nset timeout=3\nset timeout_style=menu\nset default="Install"\n' >> "$f" ;;
+    isolinux/isolinux.cfg)
+      if grep -q '^timeout' "$f"; then sed -i 's/^timeout .*/timeout 30/' "$f"; else echo 'timeout 30' >> "$f"; fi ;;
+    isolinux/txt.cfg|isolinux/gtk.cfg)
+      sed -i "s#^\(\s*append \)#\1$BOOTARGS #" "$f"
+      # Make text "Install" the default entry in the BIOS menu
+      if [ "$i" = isolinux/gtk.cfg ]; then sed -i '/menu default/d' "$f"; else sed -i '/^label install$/a\	menu default' "$f"; fi ;;
+  esac
+  MAP+=(-map "$f" "/$i")
+done
+
 # Write the new ISO, keeping the original boot records
 rm -f "$OUT"
 xorriso -indev "$SRC" -outdev "$OUT" "${MAP[@]}" \
