@@ -14,7 +14,6 @@ Everything else is configured automatically:
 - the images disk formatted as ext4 (label `vmstore`) and mounted by UUID at `/var/lib/libvirt/images`;
 - libvirt storage pool `default`;
 - Debian netinst ISO for new VMs;
-- AppArmor disabled for QEMU, because a libvirt bug in Debian 13 blocks deleting external snapshots;
 - login on serial port `ttyS0` (`serial-getty@ttyS0`);
 - bridge `br0` under NetworkManager with the NIC's MAC and a MAC-based DHCP Client ID.
 
