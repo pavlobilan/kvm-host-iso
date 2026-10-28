@@ -4,7 +4,7 @@ Description: Installation complete
 
 Template: finish-install/reboot_in_progress
 Type: note
-Description: Press Finish to power off, then disconnect the installation disk.
+Description: Press Finish to power off. Remove the installation disk if it is still attached.
 
 Template: debconf/button-continue
 Type: text
