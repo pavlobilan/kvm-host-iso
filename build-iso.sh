@@ -48,7 +48,7 @@ SRC=$(wget -qO- "$URL" | grep -o 'debian-[0-9.]*-amd64-netinst\.iso' | head -n1)
 echo -n "Verifying original Debian image (SHA256)... "
 wget -qO- "${URL}SHA256SUMS" | grep " $SRC\$" | sha256sum --quiet -c - || { echo "Checksum mismatch, delete $SRC and run again" >&2; exit 1; }
 echo "OK"
-OUT=$HOST-$SRC
+OUT=${SRC%-amd64-netinst.iso}-$HOST.iso
 
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT

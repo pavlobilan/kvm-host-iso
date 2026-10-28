@@ -25,7 +25,7 @@ On any Debian/Ubuntu machine or in WSL:
 curl -fsSL https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main/build-iso.sh | bash
 ```
 
-The script installs `xorriso`, `cpio` and `wget` if they are missing, asks for the hostname and domain, downloads the current Debian netinst, verifies its SHA256 and writes `~/kvm-iso/<hostname>-debian-<version>-amd64-netinst.iso`.
+The script installs `xorriso`, `cpio` and `wget` if they are missing, asks for the hostname and domain, downloads the current Debian netinst, verifies its SHA256 and writes `~/kvm-iso/debian-<version>-<hostname>.iso`.
 
 From a clone, the hostname and domain can be passed as arguments:
 
