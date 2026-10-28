@@ -4,7 +4,7 @@ Description: Installation complete
 
 Template: finish-install/reboot_in_progress
 Type: note
-Description: Press Finish to power off the computer.
+Description: Press Finish to shut down the computer.
 
 Template: debconf/button-continue
 Type: text
