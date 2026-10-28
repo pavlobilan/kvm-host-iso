@@ -45,7 +45,9 @@ HOST=${HOST:-kvm01}; DOMAIN=${DOMAIN:-example.com}
 SRC=$(wget -qO- "$URL" | grep -o 'debian-[0-9.]*-amd64-netinst\.iso' | head -n1)
 [ -n "$SRC" ] || { echo "Could not find netinst at $URL" >&2; exit 1; }
 [ -f "$SRC" ] || wget "$URL$SRC"
-wget -qO- "${URL}SHA256SUMS" | grep " $SRC\$" | sha256sum -c -
+echo -n "Verifying original Debian image (SHA256)... "
+wget -qO- "${URL}SHA256SUMS" | grep " $SRC\$" | sha256sum --quiet -c - || { echo "Checksum mismatch, delete $SRC and run again" >&2; exit 1; }
+echo "OK"
 OUT=$HOST-$SRC
 
 WORK=$(mktemp -d)
