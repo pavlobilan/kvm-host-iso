@@ -58,12 +58,13 @@ EXTRA="$WORK/initrd-extra"
 mkdir -p "$EXTRA/usr/lib/finish-install.d" "$EXTRA/usr/share/kvm-host-iso"
 # preseed.cfg with the hostname and domain
 sed -e "s/kvm01/$HOST/g" -e "s/example\.com/$DOMAIN/" preseed.cfg > "$EXTRA/preseed.cfg"
-# Custom text and "Finish" button for the "Installation complete" screen, loaded just before 20final-message shows it
+# Custom title, text and "Finish" button for the last screen, loaded just before 20final-message shows it
 cp finish.templates "$EXTRA/usr/share/kvm-host-iso/finish.templates"
 cat > "$EXTRA/usr/lib/finish-install.d/19kvm-final-message" <<'HOOK'
 #!/bin/sh
 . /usr/share/debconf/confmodule
 db_x_loadtemplatefile /usr/share/kvm-host-iso/finish.templates d-i || true
+db_settitle kvm-host-iso/title || true
 HOOK
 chmod 755 "$EXTRA/usr/lib/finish-install.d/19kvm-final-message"
 

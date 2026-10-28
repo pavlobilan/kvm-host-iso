@@ -1,8 +1,10 @@
+Template: kvm-host-iso/title
+Type: text
+Description: Installation complete
+
 Template: finish-install/reboot_in_progress
 Type: note
-Description: Installation complete
- After you press Finish, the computer will power off. Disconnect the
- installation disk from the computer before turning it on again.
+Description: After you press Finish, the computer will power off. Disconnect the installation disk from the computer before turning it on again.
 
 Template: debconf/button-continue
 Type: text
