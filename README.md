@@ -39,8 +39,8 @@ cd kvm-host-iso
 
 1. Attach the ISO to the VM as a CD, or write it to a USB stick (Rufus: DD mode, or `dd`).
 2. Boot from it and choose **Install** or **Graphical install**.
-3. Enter the username and the password twice, then select the system disk. Installation continues unattended and the server reboots.
-4. If the installer menu appears again after the reboot, detach the ISO or change the boot order.
+3. Enter the username and the password twice, then select the system disk. Installation continues unattended and the server powers off.
+4. Detach the ISO (or change the boot order) and power the server on.
 
 ## First boot
 
