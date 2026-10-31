@@ -4,11 +4,12 @@ Builds a Debian netinst ISO that installs a KVM host with minimal input. You onl
 
 - the username and password (in the installer);
 - the system disk (in the installer);
+- whether to encrypt the disks (in the installer, default **No**) and, if yes, the passphrases;
 - the disk for VM images (on the console after the first boot).
 
 Everything else is configured automatically:
 
-- LVM on the whole system disk;
+- LVM on the whole system disk (encrypted LVM if chosen);
 - SSH, sudo, full upgrade, time zone Europe/Kyiv;
 - KVM, libvirt, Cockpit;
 - the images disk formatted as ext4 (label `vmstore`) and mounted by UUID at `/var/lib/libvirt/images`;
@@ -39,7 +40,7 @@ cd kvm-host-iso
 
 1. Attach the ISO to the VM as a CD, or write it to a USB stick (Rufus: DD mode, or `dd`).
 2. Boot from it and press Enter: **Install** is preselected. The menu waits without a timeout, so a disk left attached does not start a new installation.
-3. Enter the username and the password twice, then select the system disk. Installation continues unattended until the "Installation complete" screen; press **Finish** and the server powers off.
+3. Enter the username and the password twice, answer the encryption question (Enter keeps **No**), then select the system disk. With encryption, the installer also asks for the disk passphrase. Installation continues unattended until the "Installation complete" screen; press **Finish** and the server powers off.
 4. Power the server on. The installer ejects the CD at the end; remove a USB stick if you used one.
 
 ## First boot
@@ -48,7 +49,7 @@ The setup runs on the server console (tty1), not over SSH.
 
 1. Select the disk for VM images. The system disk is not listed.
 2. If the disk already has a `vmstore` partition, choose **Yes** to keep its data or **No** to erase it.
-3. Confirm erasing the disk.
+3. Confirm erasing the disk. If the system disk is encrypted, enter a passphrase for the images disk: it is unlocked at boot by a key file on the system disk, and the passphrase is needed only to keep its data after a reinstall.
 4. Wait for the Debian ISO for VMs to download.
 5. The final screen shows the MAC address. Reserve an IP for this MAC on the router and clear the Client ID field there.
 6. Press **OK**. The server reboots and gets the reserved IP on `br0`.
@@ -79,3 +80,4 @@ Then open `https://<server-IP>:9090`, log in and turn on administrative access.
 | `kvm-setup.sh` | First-boot setup, installed as `/usr/local/sbin/kvm-setup` |
 | `kvm-setup.service` | Runs `kvm-setup` once on tty1 |
 | `finish.templates` | Title, text and button of the last installer screen |
+| `encrypt.templates` | Installer question whether to encrypt the disks |

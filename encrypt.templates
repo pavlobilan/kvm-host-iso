@@ -1,0 +1,6 @@
+Template: kvm-host-iso/encrypt
+Type: boolean
+Default: false
+Description: Encrypt the disks?
+ Encrypts the system disk and the disk for VM images. The passphrase
+ must be entered at the console on every boot.

@@ -33,35 +33,94 @@ fi
 DISK=$(whiptail --title "$TITLE" --menu "Select the disk for VM images (system disk: $ROOT_DISK)" 20 78 10 \
   "${MENU[@]}" 3>&1 1>&2 2>&3) || { echo "Cancelled. Run again: sudo kvm-setup"; exit 1; }
 
-# Look for an existing vmstore partition, to optionally keep images after a reinstall
-PART=""
+# Encrypt the images disk only when the system disk is encrypted: its key file is stored there
+ENCRYPT=no
+lsblk -rsno TYPE "$(findmnt -no SOURCE /)" | grep -qx crypt && ENCRYPT=yes
+KEYFILE=/etc/cryptsetup-keys.d/vmstore.key
+
+# Ask for a new passphrase twice (recovery key of the encrypted images disk)
+ask_new_passphrase() {
+  local p2
+  while true; do
+    PASS=$(whiptail --title "$TITLE" --passwordbox "Passphrase for the VM images disk.\nIt is needed only to keep the data after a reinstall.\n\nPassphrase (8+ characters):" 12 70 3>&1 1>&2 2>&3) || return 1
+    if [ ${#PASS} -lt 8 ]; then
+      whiptail --title "$TITLE" --msgbox "The passphrase must be at least 8 characters." 8 60; continue
+    fi
+    p2=$(whiptail --title "$TITLE" --passwordbox "Enter the passphrase again:" 10 70 3>&1 1>&2 2>&3) || return 1
+    [ "$PASS" = "$p2" ] && return 0
+    whiptail --title "$TITLE" --msgbox "The passphrases do not match." 8 60
+  done
+}
+
+# Look for an existing vmstore partition (ext4 or LUKS), to optionally keep images after a reinstall
+PART=""; PTYPE=""
 for p in $(lsblk -lnpo NAME,TYPE "$DISK" | awk '$2=="part"{print $1}'); do
-  [ "$(blkid -s LABEL -o value "$p" || true)" = vmstore ] && PART=$p && break
+  if [ "$(blkid -s LABEL -o value "$p" || true)" = vmstore ]; then
+    PART=$p; PTYPE=$(blkid -s TYPE -o value "$p" || true); break
+  fi
 done
 
 KEEP=no
-if [ -n "$PART" ] && whiptail --title "$TITLE" --yesno \
-  "Found existing vmstore partition $PART.\n\nKeep its data?\n(No = erase the whole disk)" 12 70; then
-  KEEP=yes
+if [ -n "$PART" ]; then
+  if [ "$PTYPE" = crypto_LUKS ] && [ "$ENCRYPT" = no ]; then
+    whiptail --title "$TITLE" --msgbox "Found encrypted vmstore partition $PART, but the system disk is not encrypted, so it cannot be unlocked at boot.\n\nThe disk can only be erased." 12 70
+  elif whiptail --title "$TITLE" --yesno \
+    "Found existing vmstore partition $PART.\n\nKeep its data?\n(No = erase the whole disk)" 12 70; then
+    KEEP=yes
+  fi
 fi
 
 if [ "$KEEP" = no ]; then
   whiptail --title "$TITLE" --defaultno --yesno "ALL DATA on $DISK will be erased.\n\nContinue?" 10 70 \
     || { echo "Cancelled. Run again: sudo kvm-setup"; exit 1; }
-  # Wipe old signatures (VMFS etc.), create GPT with one partition and format it as ext4
+  if [ "$ENCRYPT" = yes ]; then
+    ask_new_passphrase || { echo "Cancelled. Run again: sudo kvm-setup"; exit 1; }
+  fi
+  # Wipe old signatures (VMFS etc.) and create GPT with one partition
   wipefs -a "$DISK"
   parted -s "$DISK" mklabel gpt mkpart vmstore ext4 0% 100%
   udevadm settle
   PART=$(lsblk -lnpo NAME,TYPE "$DISK" | awk '$2=="part"{print $1; exit}')
   wipefs -a "$PART"
-  mkfs.ext4 -F -L vmstore "$PART"
+  if [ "$ENCRYPT" = yes ]; then
+    printf '%s' "$PASS" | cryptsetup luksFormat --type luks2 --label vmstore --batch-mode --key-file=- "$PART"
+    PTYPE=crypto_LUKS
+  else
+    mkfs.ext4 -F -L vmstore "$PART"
+    PTYPE=ext4
+  fi
+elif [ "$PTYPE" = crypto_LUKS ]; then
+  # Existing encrypted partition: its passphrase is needed to add the new key file
+  while true; do
+    PASS=$(whiptail --title "$TITLE" --passwordbox "Passphrase of the existing VM images disk $PART:" 10 70 3>&1 1>&2 2>&3) \
+      || { echo "Cancelled. Run again: sudo kvm-setup"; exit 1; }
+    printf '%s' "$PASS" | cryptsetup open --test-passphrase --key-file=- "$PART" && break
+    whiptail --title "$TITLE" --msgbox "Wrong passphrase." 8 50
+  done
 fi
 
-# Mount by UUID, because sda/sdb names can change
-UUID=$(blkid -s UUID -o value "$PART")
+if [ "$PTYPE" = crypto_LUKS ]; then
+  # Key file on the encrypted system disk unlocks the images disk at boot without a second passphrase
+  if [ ! -s "$KEYFILE" ]; then
+    install -d -m 700 /etc/cryptsetup-keys.d
+    (umask 077; head -c 64 /dev/urandom > "$KEYFILE")
+  fi
+  cryptsetup open --test-passphrase --key-file "$KEYFILE" "$PART" 2>/dev/null \
+    || printf '%s' "$PASS" | cryptsetup luksAddKey --key-file=- "$PART" "$KEYFILE"
+  unset PASS
+  grep -q '^vmstore ' /etc/crypttab 2>/dev/null \
+    || echo "vmstore UUID=$(cryptsetup luksUUID "$PART") $KEYFILE luks,discard" >> /etc/crypttab
+  [ -e /dev/mapper/vmstore ] || cryptsetup open --key-file "$KEYFILE" "$PART" vmstore
+  [ "$KEEP" = yes ] || mkfs.ext4 -F -L vmstore /dev/mapper/vmstore
+  FSDEV=/dev/mapper/vmstore
+else
+  # Mount by UUID, because sda/sdb names can change
+  FSDEV="UUID=$(blkid -s UUID -o value "$PART")"
+fi
+
 mkdir -p "$IMAGES"
 cp -n /etc/fstab /etc/fstab.bak
-grep -q "UUID=$UUID " /etc/fstab || echo "UUID=$UUID $IMAGES ext4 defaults 0 2" >> /etc/fstab
+grep -q "^$FSDEV " /etc/fstab || echo "$FSDEV $IMAGES ext4 defaults 0 2" >> /etc/fstab
 systemctl daemon-reload
 mountpoint -q "$IMAGES" || mount "$IMAGES"
 

@@ -7,7 +7,7 @@ set -euo pipefail
 
 REPO_RAW=${REPO_RAW:-https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main}
 URL=https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/
-FILES=(preseed.cfg kvm-setup.sh kvm-setup.service finish.templates)
+FILES=(preseed.cfg kvm-setup.sh kvm-setup.service finish.templates encrypt.templates)
 
 # Work next to the script; when run via curl | bash, work in ~/kvm-iso
 SELF=$(readlink -f "${BASH_SOURCE[0]:-}" 2>/dev/null || true)
@@ -67,6 +67,25 @@ db_x_loadtemplatefile /usr/share/kvm-host-iso/finish.templates d-i || true
 db_settitle kvm-host-iso/title || true
 HOOK
 chmod 755 "$EXTRA/usr/lib/finish-install.d/19kvm-final-message"
+# Encryption question: partman hook, copied to /lib/partman/init.d by preseed/early_command
+cp encrypt.templates "$EXTRA/usr/share/kvm-host-iso/encrypt.templates"
+cat > "$EXTRA/usr/share/kvm-host-iso/99kvm-encrypt" <<'HOOK'
+#!/bin/sh
+# Ask once (default No) and switch guided partitioning between LVM and encrypted LVM
+. /usr/share/debconf/confmodule
+db_x_loadtemplatefile /usr/share/kvm-host-iso/encrypt.templates kvm-host-iso || true
+db_input critical kvm-host-iso/encrypt || true
+db_go || true
+db_get kvm-host-iso/encrypt
+if [ "$RET" = true ]; then
+  db_set partman-auto/method crypto
+  db_set partman-auto/init_automatically_partition some_device_crypto
+else
+  db_set partman-auto/method lvm
+  db_set partman-auto/init_automatically_partition some_device_lvm
+fi
+exit 0
+HOOK
 
 # Append the extra files to the initrd of the text and graphical installers
 MAP=()
