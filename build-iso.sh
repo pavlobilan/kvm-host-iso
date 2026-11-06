@@ -147,7 +147,7 @@ chmod 644 "$OUTDIR/$SRC" "$OUTDIR/$OUT"
 # Final message: green "Done" and the highlighted path (colors only in a terminal)
 if [ -t 1 ]; then G=$'\e[1;32m'; B=$'\e[1;36m'; N=$'\e[0m'; else G=; B=; N=; fi
 echo
-echo "${G}✔ Done${N}"
+echo "${G}✓  Done${N}"
 echo
 echo "The ISO image has been saved to the folder:"
 echo "  ${B}$OUTDIR/$OUT${N}"
