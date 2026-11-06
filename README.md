@@ -8,13 +8,13 @@ Run on any Debian/Ubuntu machine or in WSL:
 curl -fsSL https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main/build-iso.sh | bash
 ```
 
-The ISO is saved to the `kvm-iso` folder in the home directory of the user who ran the command:
+The ISO is saved to the shared folder `/srv/kvm-iso`:
 
 ```
-~/kvm-iso/debian-<version>-<hostname>.iso
+/srv/kvm-iso/debian-<version>-<hostname>.iso
 ```
 
-For example, `/home/admin/kvm-iso/debian-13.7.0-kvm01.iso`, or `/root/kvm-iso/...` when run as root. The last line of the output, `Done: ...`, shows the full path.
+For example, `/srv/kvm-iso/debian-13.7.0-kvm01.iso`. All users can read it (e.g. download it with WinSCP), and the user who ran the command owns it, also when run with `sudo -i`. The last line of the output, `Done: ...`, shows the full path.
 
 ## What it does
 
@@ -38,26 +38,28 @@ Everything else is configured automatically:
 
 ## Build details
 
-The script installs `xorriso`, `cpio` and `wget` if they are missing, asks for the hostname and domain, downloads the current Debian netinst, verifies its SHA256 and builds the ISO.
+The script installs `xorriso`, `cpio` and `wget` if they are missing, creates `/srv/kvm-iso` (with `sudo` the first time), asks for the hostname and domain, downloads the current Debian netinst, verifies its SHA256 and builds the ISO.
 
 | File | Location |
 | --- | --- |
-| Built ISO | `~/kvm-iso/debian-<version>-<hostname>.iso` |
-| Original Debian netinst (kept for the next build) | `~/kvm-iso/debian-<version>-amd64-netinst.iso` |
+| Built ISO | `/srv/kvm-iso/debian-<version>-<hostname>.iso` |
+| Original Debian netinst (kept for the next build) | `/srv/kvm-iso/debian-<version>-amd64-netinst.iso` |
+
+To use another folder, set `OUTDIR`, e.g. `curl ... | OUTDIR=/data/iso bash`.
 
 ```bash
 # List the built ISO files
-ls -lh ~/kvm-iso/*.iso
+ls -lh /srv/kvm-iso/*.iso
 ```
 
-In WSL, open the folder in Windows Explorer at `\\wsl$\<distribution>\home\<user>\kvm-iso`, or copy the ISO to Windows:
+In WSL, open the folder in Windows Explorer at `\\wsl$\<distribution>\srv\kvm-iso`, or copy the ISO to Windows:
 
 ```bash
 # Copy the ISO to the Windows Downloads folder (replace <WINUSER> with the folder name in C:\Users)
-cp ~/kvm-iso/debian-<version>-<hostname>.iso /mnt/c/Users/<WINUSER>/Downloads/
+cp /srv/kvm-iso/debian-<version>-<hostname>.iso /mnt/c/Users/<WINUSER>/Downloads/
 ```
 
-From a clone, the hostname and domain can be passed as arguments; the files are then written to the clone folder:
+From a clone, the hostname and domain can be passed as arguments:
 
 ```bash
 git clone https://github.com/pavlobilan/kvm-host-iso.git
