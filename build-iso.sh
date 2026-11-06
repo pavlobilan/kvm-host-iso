@@ -110,7 +110,7 @@ for i in install.amd/initrd.gz install.amd/gtk/initrd.gz; do
   MAP+=(-map "$f" "/$i")
 done
 
-# Boot menus: preselect "Install" without a timeout (nothing starts if the disk is left attached)
+# Boot menus: start "Install" immediately without showing the menu
 # and pass locale/keymap to the kernel, so the language and keyboard questions are answered before preseed.cfg is read
 BOOTARGS="locale=en_US.UTF-8 keymap=us"
 for i in boot/grub/grub.cfg isolinux/isolinux.cfg isolinux/txt.cfg isolinux/gtk.cfg; do
@@ -120,9 +120,9 @@ for i in boot/grub/grub.cfg isolinux/isolinux.cfg isolinux/txt.cfg isolinux/gtk.
   case $i in
     boot/grub/grub.cfg)
       sed -i "s#\(/install.amd/vmlinuz\)#\1 $BOOTARGS#" "$f"
-      printf '\nset timeout=-1\nset default="Install"\n' >> "$f" ;;
+      printf '\nset timeout=0\nset timeout_style=hidden\nset default="Install"\n' >> "$f" ;;
     isolinux/isolinux.cfg)
-      if grep -q '^timeout' "$f"; then sed -i 's/^timeout .*/timeout 0/' "$f"; else echo 'timeout 0' >> "$f"; fi ;;
+      if grep -q '^timeout' "$f"; then sed -i 's/^timeout .*/timeout 1/' "$f"; else echo 'timeout 1' >> "$f"; fi ;;
     isolinux/txt.cfg|isolinux/gtk.cfg)
       sed -i "s#^\(\s*append \)#\1$BOOTARGS #" "$f"
       # Make text "Install" the default entry in the BIOS menu
