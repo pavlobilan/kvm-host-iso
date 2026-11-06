@@ -1,8 +1,22 @@
 # kvm-host-iso
 
-Builds a Debian netinst ISO that installs a KVM host with minimal input.
+Builds a Debian ISO that installs a KVM host with minimal input.
 
-**Where the ISO is saved:** in the `kvm-iso` folder in the home directory of the user who runs the build, for example `/home/admin/kvm-iso/debian-13.7.0-kvm01.iso` (or `/root/kvm-iso/...` when run as root). The last line of the build output, `Done: ...`, shows the full path.
+Run on any Debian/Ubuntu machine or in WSL:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main/build-iso.sh | bash
+```
+
+The ISO is saved to the `kvm-iso` folder in the home directory of the user who ran the command:
+
+```
+~/kvm-iso/debian-<version>-<hostname>.iso
+```
+
+For example, `/home/admin/kvm-iso/debian-13.7.0-kvm01.iso`, or `/root/kvm-iso/...` when run as root. The last line of the output, `Done: ...`, shows the full path.
+
+## What it does
 
 During installation you only enter:
 
@@ -22,24 +36,14 @@ Everything else is configured automatically:
 - login on serial port `ttyS0` (`serial-getty@ttyS0`);
 - bridge `br0` under NetworkManager with the NIC's MAC and a MAC-based DHCP Client ID.
 
-## Build the ISO
-
-On any Debian/Ubuntu machine or in WSL:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main/build-iso.sh | bash
-```
+## Build details
 
 The script installs `xorriso`, `cpio` and `wget` if they are missing, asks for the hostname and domain, downloads the current Debian netinst, verifies its SHA256 and builds the ISO.
 
-Output:
-
-| What | Where |
+| File | Location |
 | --- | --- |
-| Built ISO | `~/kvm-iso/debian-<version>-<hostname>.iso`, e.g. `/home/admin/kvm-iso/debian-13.7.0-kvm01.iso` |
+| Built ISO | `~/kvm-iso/debian-<version>-<hostname>.iso` |
 | Original Debian netinst (kept for the next build) | `~/kvm-iso/debian-<version>-amd64-netinst.iso` |
-
-`~` is the home directory of the user who runs the command. When the script is run from a clone (`./build-iso.sh`), both files are written to the clone folder instead.
 
 ```bash
 # List the built ISO files
@@ -53,7 +57,7 @@ In WSL, open the folder in Windows Explorer at `\\wsl$\<distribution>\home\<user
 cp ~/kvm-iso/debian-<version>-<hostname>.iso /mnt/c/Users/<WINUSER>/Downloads/
 ```
 
-From a clone, the hostname and domain can be passed as arguments:
+From a clone, the hostname and domain can be passed as arguments; the files are then written to the clone folder:
 
 ```bash
 git clone https://github.com/pavlobilan/kvm-host-iso.git
