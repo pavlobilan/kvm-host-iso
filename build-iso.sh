@@ -144,11 +144,8 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 chmod 644 "$OUTDIR/$SRC" "$OUTDIR/$OUT"
 
-# Final message: green "Done" and the highlighted path (colors only in a terminal)
-if [ -t 1 ]; then G=$'\e[1;32m'; B=$'\e[1;36m'; N=$'\e[0m'; else G=; B=; N=; fi
+# Final message: green check mark and text, then the path in white (colors only in a terminal)
+if [ -t 1 ]; then G=$'\e[1;32m'; W=$'\e[1;37m'; N=$'\e[0m'; else G=; W=; N=; fi
 echo
-echo "${G}✓  Done${N}"
-echo
-echo "The ISO image has been saved to the folder:"
-echo "  ${B}$OUTDIR/$OUT${N}"
+echo "${G}✓  The ISO image has been saved to the folder:${N} ${W}$OUTDIR/$OUT${N}"
 echo
