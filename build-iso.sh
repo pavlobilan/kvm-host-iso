@@ -110,23 +110,32 @@ for i in install.amd/initrd.gz install.amd/gtk/initrd.gz; do
   MAP+=(-map "$f" "/$i")
 done
 
-# Boot menus: start "Install" immediately without showing the menu
-# and pass locale/keymap to the kernel, so the language and keyboard questions are answered before preseed.cfg is read
+# Boot menus: only the "Install" entry, waiting for Enter (no timeout),
+# and locale/keymap passed to the kernel, so the language and keyboard questions are answered before preseed.cfg is read
 BOOTARGS="locale=en_US.UTF-8 keymap=us"
-for i in boot/grub/grub.cfg isolinux/isolinux.cfg isolinux/txt.cfg isolinux/gtk.cfg; do
+for i in boot/grub/grub.cfg isolinux/isolinux.cfg isolinux/menu.cfg isolinux/txt.cfg; do
   f="$WORK/$(echo "$i" | tr / _)"
   xorriso -osirrox on -indev "$SRC" -extract "/$i" "$f" 2>/dev/null || continue
   chmod u+w "$f"
   case $i in
     boot/grub/grub.cfg)
+      # UEFI: drop every top-level menuentry/submenu except 'Install' (brace depth tracks nested blocks)
+      awk '
+        skip { d += gsub(/{/, "{") - gsub(/}/, "}"); if (d <= 0) skip = 0; next }
+        /^[[:space:]]*(menuentry|submenu)[[:space:]]/ && $0 !~ /'"'"'Install'"'"'/ {
+          d = gsub(/{/, "{") - gsub(/}/, "}"); if (d > 0) skip = 1; next }
+        { print }' "$f" > "$f.new" && mv "$f.new" "$f"
       sed -i "s#\(/install.amd/vmlinuz\)#\1 $BOOTARGS#" "$f"
-      printf '\nset timeout=0\nset timeout_style=hidden\nset default="Install"\n' >> "$f" ;;
+      printf '\nset timeout=-1\nset default="Install"\n' >> "$f" ;;
     isolinux/isolinux.cfg)
-      if grep -q '^timeout' "$f"; then sed -i 's/^timeout .*/timeout 1/' "$f"; else echo 'timeout 1' >> "$f"; fi ;;
-    isolinux/txt.cfg|isolinux/gtk.cfg)
+      # BIOS: no timeout (0 = wait for Enter)
+      if grep -q '^timeout' "$f"; then sed -i 's/^timeout .*/timeout 0/' "$f"; else echo 'timeout 0' >> "$f"; fi ;;
+    isolinux/menu.cfg)
+      # BIOS: keep the menu settings and only the text installer (txt.cfg)
+      awk '/^include stdmenu.cfg/ { print; print "include txt.cfg"; exit } { print }' "$f" > "$f.new" && mv "$f.new" "$f" ;;
+    isolinux/txt.cfg)
       sed -i "s#^\(\s*append \)#\1$BOOTARGS #" "$f"
-      # Make text "Install" the default entry in the BIOS menu
-      if [ "$i" = isolinux/gtk.cfg ]; then sed -i '/menu default/d' "$f"; else sed -i '/^label install$/a\	menu default' "$f"; fi ;;
+      grep -q 'menu default' "$f" || sed -i '/^label install$/a\	menu default' "$f" ;;
   esac
   MAP+=(-map "$f" "/$i")
 done
