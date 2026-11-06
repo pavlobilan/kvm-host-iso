@@ -1,6 +1,10 @@
 # kvm-host-iso
 
-Builds a Debian netinst ISO that installs a KVM host with minimal input. You only enter:
+Builds a Debian netinst ISO that installs a KVM host with minimal input.
+
+**Where the ISO is saved:** in the `kvm-iso` folder in the home directory of the user who runs the build, for example `/home/admin/kvm-iso/debian-13.7.0-kvm01.iso` (or `/root/kvm-iso/...` when run as root). The last line of the build output, `Done: ...`, shows the full path.
+
+During installation you only enter:
 
 - the username and password (in the installer);
 - the system disk (in the installer);
@@ -26,7 +30,28 @@ On any Debian/Ubuntu machine or in WSL:
 curl -fsSL https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main/build-iso.sh | bash
 ```
 
-The script installs `xorriso`, `cpio` and `wget` if they are missing, asks for the hostname and domain, downloads the current Debian netinst, verifies its SHA256 and writes `~/kvm-iso/debian-<version>-<hostname>.iso`.
+The script installs `xorriso`, `cpio` and `wget` if they are missing, asks for the hostname and domain, downloads the current Debian netinst, verifies its SHA256 and builds the ISO.
+
+Output:
+
+| What | Where |
+| --- | --- |
+| Built ISO | `~/kvm-iso/debian-<version>-<hostname>.iso`, e.g. `/home/admin/kvm-iso/debian-13.7.0-kvm01.iso` |
+| Original Debian netinst (kept for the next build) | `~/kvm-iso/debian-<version>-amd64-netinst.iso` |
+
+`~` is the home directory of the user who runs the command. When the script is run from a clone (`./build-iso.sh`), both files are written to the clone folder instead.
+
+```bash
+# List the built ISO files
+ls -lh ~/kvm-iso/*.iso
+```
+
+In WSL, open the folder in Windows Explorer at `\\wsl$\<distribution>\home\<user>\kvm-iso`, or copy the ISO to Windows:
+
+```bash
+# Copy the ISO to the Windows Downloads folder (replace <WINUSER> with the folder name in C:\Users)
+cp ~/kvm-iso/debian-<version>-<hostname>.iso /mnt/c/Users/<WINUSER>/Downloads/
+```
 
 From a clone, the hostname and domain can be passed as arguments:
 
