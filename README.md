@@ -17,7 +17,7 @@ The ISO is saved to the shared folder `/srv/kvm-iso`:
 /srv/kvm-iso/debian-<version>-kvm-auto.iso
 ```
 
-Boot the server from it, press Enter in the boot menu and answer these questions. The rest of the installation runs without questions. At the end the "Installation complete" screen asks to press Enter: the installer ejects the ISO and the server powers off. Power it on again; the first-boot setup and the reboot run without questions. Then reserve the IP for the MAC shown on the console on the router.
+Boot the server from it, press Enter in the boot menu and answer these questions. The rest of the installation runs without questions. At the end the installer ejects the ISO and reboots the server; the first-boot setup and the next reboot run without questions. Then reserve the IP for the MAC shown on the console on the router.
 
 **Both disks are erased without confirmation.** Check the disk names first, e.g. with `lsblk` from a running system or in the Hyper-V VM settings.
 
@@ -95,8 +95,8 @@ cd kvm-host-iso
 
 1. Attach the ISO to the VM as a CD, or write it to a USB stick (Rufus: DD mode, or `dd`).
 2. Boot from it and press Enter: the boot menu has only **Install**. It waits without a timeout, so a disk left attached does not start a new installation.
-3. Enter the username and the password twice, answer the encryption question (Enter keeps **No**), then select the system disk. With encryption, the installer also asks for the disk passphrase. Installation continues unattended until the "Installation complete" screen; press Enter (**Shut down**) and the server powers off.
-4. Power the server on. The installer ejects the CD at the end; remove a USB stick if you used one.
+3. Enter the username and the password twice, answer the encryption question (Enter keeps **No**), then select the system disk. With encryption, the installer also asks for the disk passphrase. Installation continues unattended; at the end the installer ejects the ISO and reboots the server.
+4. If you installed from a USB stick, remove it while the server reboots. If the boot menu of the ISO appears again, the ISO was not detached: detach it and reboot.
 
 ## First boot
 
@@ -134,5 +134,4 @@ Then open `https://<server-IP>:9090`, log in and turn on administrative access.
 | `preseed.cfg` | Installer answers |
 | `kvm-setup.sh` | First-boot setup, installed as `/usr/local/sbin/kvm-setup` |
 | `kvm-setup.service` | Runs `kvm-setup` once on tty1 |
-| `finish.templates` | Title, text and button of the last installer screen |
 | `encrypt.templates` | Installer question whether to encrypt the disks |

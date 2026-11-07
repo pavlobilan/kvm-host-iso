@@ -10,7 +10,7 @@ set -euo pipefail
 
 REPO_RAW=${REPO_RAW:-https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main}
 URL=https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/
-FILES=(preseed.cfg kvm-setup.sh kvm-setup.service finish.templates encrypt.templates)
+FILES=(preseed.cfg kvm-setup.sh kvm-setup.service encrypt.templates)
 OUTDIR=${OUTDIR:-/srv/kvm-iso}
 OWNER=${SUDO_USER:-$(id -un)}
 SUDO=; [ "$(id -u)" -eq 0 ] || SUDO=sudo
@@ -77,7 +77,7 @@ MAP=()
 
 # Files added to the installer initrd
 EXTRA="$WORK/initrd-extra"
-mkdir -p "$EXTRA/usr/lib/finish-install.d" "$EXTRA/usr/share/kvm-host-iso"
+mkdir -p "$EXTRA/usr/share/kvm-host-iso"
 # preseed.cfg with the hostname and domain
 sed -e "s/kvm01/$HOST/g" -e "s/example\.com/$DOMAIN/" "$SRCDIR/preseed.cfg" > "$EXTRA/preseed.cfg"
 # Automatic mode (build-iso-auto.sh): the installer asks only the hostname, domain, user, password and
@@ -94,15 +94,6 @@ EOF
   MAP+=(-map "$WORK/kvm-setup.conf" /kvm-setup.conf)
 fi
 
-# Custom title, text and "Shut down" button for the last screen, loaded just before 20final-message shows it
-cp "$SRCDIR/finish.templates" "$EXTRA/usr/share/kvm-host-iso/finish.templates"
-cat > "$EXTRA/usr/lib/finish-install.d/19kvm-final-message" <<'HOOK'
-#!/bin/sh
-. /usr/share/debconf/confmodule
-db_x_loadtemplatefile /usr/share/kvm-host-iso/finish.templates d-i || true
-db_settitle kvm-host-iso/title || true
-HOOK
-chmod 755 "$EXTRA/usr/lib/finish-install.d/19kvm-final-message"
 # Encryption question: partman hook, copied to /lib/partman/init.d by preseed/early_command
 cp "$SRCDIR/encrypt.templates" "$EXTRA/usr/share/kvm-host-iso/encrypt.templates"
 cat > "$EXTRA/usr/share/kvm-host-iso/99kvm-encrypt" <<'HOOK'
