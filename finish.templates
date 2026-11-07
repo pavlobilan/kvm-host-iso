@@ -4,8 +4,8 @@ Description: Installation complete
 
 Template: finish-install/reboot_in_progress
 Type: note
-Description: Press Finish to shut down the computer.
+Description: Press Enter to shut down the computer.
 
 Template: debconf/button-continue
 Type: text
-Description: Finish
+Description: Shut down

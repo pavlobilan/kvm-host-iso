@@ -17,7 +17,7 @@ The ISO is saved to the shared folder `/srv/kvm-iso`:
 /srv/kvm-iso/debian-<version>-kvm-auto.iso
 ```
 
-Boot the server from it, press Enter in the boot menu and answer these questions. The rest of the installation, the first-boot setup and the reboot run without questions; the server powers off after the installation, so power it on again. Then reserve the IP for the MAC shown on the console on the router.
+Boot the server from it, press Enter in the boot menu and answer these questions. The rest of the installation runs without questions. At the end the "Installation complete" screen asks to press Enter: the installer ejects the ISO and the server powers off. Power it on again; the first-boot setup and the reboot run without questions. Then reserve the IP for the MAC shown on the console on the router.
 
 **Both disks are erased without confirmation.** Check the disk names first, e.g. with `lsblk` from a running system or in the Hyper-V VM settings.
 
@@ -95,7 +95,7 @@ cd kvm-host-iso
 
 1. Attach the ISO to the VM as a CD, or write it to a USB stick (Rufus: DD mode, or `dd`).
 2. Boot from it and press Enter: the boot menu has only **Install**. It waits without a timeout, so a disk left attached does not start a new installation.
-3. Enter the username and the password twice, answer the encryption question (Enter keeps **No**), then select the system disk. With encryption, the installer also asks for the disk passphrase. Installation continues unattended until the "Installation complete" screen; press **Finish** and the server powers off.
+3. Enter the username and the password twice, answer the encryption question (Enter keeps **No**), then select the system disk. With encryption, the installer also asks for the disk passphrase. Installation continues unattended until the "Installation complete" screen; press Enter (**Shut down**) and the server powers off.
 4. Power the server on. The installer ejects the CD at the end; remove a USB stick if you used one.
 
 ## First boot
