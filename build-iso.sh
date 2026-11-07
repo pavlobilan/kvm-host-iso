@@ -50,6 +50,7 @@ if [ ${#NEED[@]} -gt 0 ]; then
 fi
 
 if [ "$FETCH" = yes ]; then
+  echo "Downloading the build files from GitHub..."
   for f in "${FILES[@]}"; do wget -q "$REPO_RAW/$f" -O "$SRCDIR/$f"; done
 fi
 # Strip Windows line endings in case the files were edited on Windows
@@ -63,6 +64,7 @@ cd "$OUTDIR"
 
 
 # Find the current netinst, download it and verify SHA256
+echo "Looking up the current Debian image on cdimage.debian.org..."
 SRC=$(wget -qO- "$URL" | grep -o 'debian-[0-9.]*-amd64-netinst\.iso' | head -n1)
 [ -n "$SRC" ] || { echo "Could not find netinst at $URL" >&2; exit 1; }
 
@@ -70,12 +72,19 @@ SRC=$(wget -qO- "$URL" | grep -o 'debian-[0-9.]*-amd64-netinst\.iso' | head -n1)
 OUT=${OUT:-${SRC%-amd64-netinst.iso}-kvm.iso}
 [ "$OUT" != "$SRC" ] || { echo "The name must differ from the original image $SRC" >&2; exit 1; }
 
-[ -f "$SRC" ] || wget "$URL$SRC"
+if [ -f "$SRC" ]; then
+  echo "Using the already downloaded $SRC"
+else
+  echo "Downloading $SRC..."
+  wget -q --show-progress "$URL$SRC"
+fi
 echo -n "Verifying original Debian image (SHA256)... "
 wget -qO- "${URL}SHA256SUMS" | grep " $SRC\$" | sha256sum --quiet -c - || { echo "Checksum mismatch, delete $SRC and run again" >&2; exit 1; }
 echo "OK"
 
 MAP=()
+
+echo "Preparing the installer files..."
 
 # Files added to the installer initrd
 EXTRA="$WORK/initrd-extra"
@@ -148,6 +157,7 @@ done
 
 # Write the new ISO, keeping the original boot records
 rm -f "$OUT"
+echo "Building $OUT (about a minute)..."
 xorriso -indev "$SRC" -outdev "$OUT" "${MAP[@]}" \
   -map "$SRCDIR/kvm-setup.sh" /kvm-setup.sh \
   -map "$SRCDIR/kvm-setup.service" /kvm-setup.service \
