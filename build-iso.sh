@@ -17,6 +17,16 @@ OWNER=${SUDO_USER:-$(id -un)}
 SUDO=; [ "$(id -u)" -eq 0 ] || SUDO=sudo
 umask 022
 
+# Name of the built ISO, asked first: argument, or prompt (Enter = default); ".iso" is added if missing
+OUT=${1:-}
+if [ -z "$OUT" ]; then
+  read -rp "ISO file name [debian-<version>-kvm.iso]: " OUT </dev/tty 2>/dev/null || OUT=""
+fi
+if [ -n "$OUT" ]; then
+  case $OUT in *.iso) ;; *) OUT=$OUT.iso ;; esac
+  [[ $OUT =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.iso$ ]] || { echo "Invalid file name: $OUT (letters, digits, . _ -)" >&2; exit 1; }
+fi
+
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 SRCDIR="$WORK/src"
@@ -56,15 +66,8 @@ cd "$OUTDIR"
 SRC=$(wget -qO- "$URL" | grep -o 'debian-[0-9.]*-amd64-netinst\.iso' | head -n1)
 [ -n "$SRC" ] || { echo "Could not find netinst at $URL" >&2; exit 1; }
 
-# Name of the built ISO: argument, or asked (Enter = default); ".iso" is added if missing
-DEFAULT_OUT=${SRC%-amd64-netinst.iso}-kvm.iso
-OUT=${1:-}
-if [ -z "$OUT" ]; then
-  read -rp "ISO file name [$DEFAULT_OUT]: " OUT </dev/tty 2>/dev/null || OUT=""
-fi
-OUT=${OUT:-$DEFAULT_OUT}
-case $OUT in *.iso) ;; *) OUT=$OUT.iso ;; esac
-[[ $OUT =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.iso$ ]] || { echo "Invalid file name: $OUT (letters, digits, . _ -)" >&2; exit 1; }
+# Default name with the Debian version, if no name was given
+OUT=${OUT:-${SRC%-amd64-netinst.iso}-kvm.iso}
 [ "$OUT" != "$SRC" ] || { echo "The name must differ from the original image $SRC" >&2; exit 1; }
 
 [ -f "$SRC" ] || wget "$URL$SRC"
