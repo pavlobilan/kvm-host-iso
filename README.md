@@ -8,10 +8,10 @@ Run on any Debian/Ubuntu machine or in WSL:
 curl -fsSL https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main/build-iso.sh | bash
 ```
 
-At the start the script asks the ISO file name; press Enter to keep the default `debian-<version>-kvm.iso`. A file with the same name is overwritten. The ISO is saved to the shared folder `/srv/kvm-iso`:
+At the start the script asks the ISO file name; press Enter to keep the default `debian-<version>-kvm-host.iso`. A file with the same name is overwritten. The ISO is saved to the shared folder `/srv/kvm-iso`:
 
 ```
-/srv/kvm-iso/debian-<version>-kvm.iso
+/srv/kvm-iso/debian-<version>-kvm-host.iso
 ```
 
 Nothing else is asked during the build, so one ISO can be used for any number of servers.
@@ -74,7 +74,7 @@ The script installs `xorriso`, `cpio` and `wget` if they are missing, creates `/
 
 | File | Location |
 | --- | --- |
-| Built ISO | `/srv/kvm-iso/<name>.iso`, default `debian-<version>-kvm.iso` |
+| Built ISO | `/srv/kvm-iso/<name>.iso`, default `debian-<version>-kvm-host.iso` |
 | Original Debian netinst (kept for the next build) | `/srv/kvm-iso/debian-<version>-amd64-netinst.iso` |
 
 To use another folder, set `OUTDIR`, e.g. `curl ... | OUTDIR=/data/iso bash`.
@@ -83,7 +83,7 @@ In WSL, open the folder in Windows Explorer at `\\wsl$\<distribution>\srv\kvm-is
 
 ```bash
 # Copy the ISO to the Windows Downloads folder (replace <WINUSER> with the folder name in C:\Users)
-cp /srv/kvm-iso/debian-<version>-kvm.iso /mnt/c/Users/<WINUSER>/Downloads/
+cp /srv/kvm-iso/debian-<version>-kvm-host.iso /mnt/c/Users/<WINUSER>/Downloads/
 ```
 
 From a clone:

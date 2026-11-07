@@ -22,7 +22,7 @@ OUT=${1:-}
 if [ -z "$OUT" ]; then
   # Ask on the terminal (stdin is the script itself under curl | bash); no terminal = default name
   if (exec </dev/tty) 2>/dev/null; then
-    read -rp "ISO file name (press Enter for debian-<version>-kvm.iso): " OUT </dev/tty || OUT=""
+    read -rp "ISO file name (press Enter for debian-<version>-kvm-host.iso): " OUT </dev/tty || OUT=""
   fi
 fi
 if [ -n "$OUT" ]; then
@@ -72,7 +72,7 @@ SRC=$(wget -qO- "$URL" | grep -o 'debian-[0-9.]*-amd64-netinst\.iso' | head -n1)
 [ -n "$SRC" ] || { echo "Could not find netinst at $URL" >&2; exit 1; }
 
 # Default name with the Debian version, if no name was given
-OUT=${OUT:-${SRC%-amd64-netinst.iso}-kvm.iso}
+OUT=${OUT:-${SRC%-amd64-netinst.iso}-kvm-host.iso}
 [ "$OUT" != "$SRC" ] || { echo "The name must differ from the original image $SRC" >&2; exit 1; }
 
 if [ -f "$SRC" ]; then
