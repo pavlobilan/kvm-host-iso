@@ -86,7 +86,7 @@ if [ "$KEEP" = no ]; then
     printf '%s' "$PASS" | cryptsetup luksFormat --type luks2 --label vmstore --batch-mode --key-file=- "$PART"
     PTYPE=crypto_LUKS
   else
-    mkfs.ext4 -F -L vmstore "$PART"
+    mkfs.ext4 -q -F -L vmstore "$PART"
     PTYPE=ext4
   fi
 elif [ "$PTYPE" = crypto_LUKS ]; then
@@ -111,7 +111,7 @@ if [ "$PTYPE" = crypto_LUKS ]; then
   grep -q '^vmstore ' /etc/crypttab 2>/dev/null \
     || echo "vmstore UUID=$(cryptsetup luksUUID "$PART") $KEYFILE luks,discard" >> /etc/crypttab
   [ -e /dev/mapper/vmstore ] || cryptsetup open --key-file "$KEYFILE" "$PART" vmstore
-  [ "$KEEP" = yes ] || mkfs.ext4 -F -L vmstore /dev/mapper/vmstore
+  [ "$KEEP" = yes ] || mkfs.ext4 -q -F -L vmstore /dev/mapper/vmstore
   FSDEV=/dev/mapper/vmstore
 else
   # Mount by UUID, because sda/sdb names can change
@@ -133,16 +133,18 @@ grep -q '^security_driver' /etc/libvirt/qemu.conf || echo 'security_driver = "no
 systemctl restart libvirtd
 
 # Pool "default" in the images directory, autostarted
-virsh pool-info default &>/dev/null || virsh pool-define-as default dir --target "$IMAGES"
-virsh pool-autostart default
-virsh pool-info default | grep -q 'State:.*running' || virsh pool-start default
+virsh pool-info default &>/dev/null || virsh pool-define-as default dir --target "$IMAGES" >/dev/null
+virsh pool-autostart default >/dev/null
+virsh pool-info default | grep -q 'State:.*running' || virsh pool-start default >/dev/null
 
-# Download Debian netinst ISO for VMs and verify SHA256
+# Download the Debian netinst ISO for VMs (only debian-<version>-amd64-netinst.iso, not debian-edu etc.) and verify SHA256
 echo "Downloading Debian netinst ISO for VMs..."
-if (cd "$IMAGES" \
-    && wget -q --show-progress -r -l1 -nd -np -A 'debian-*-amd64-netinst.iso' "$VM_ISO_URL" \
-    && wget -qO- "${VM_ISO_URL}SHA256SUMS" | sha256sum -c --ignore-missing -); then
-  virsh pool-refresh default
+VM_ISO=$(wget -qO- "$VM_ISO_URL" | grep -o 'debian-[0-9.]*-amd64-netinst\.iso' | head -n1 || true)
+if [ -n "$VM_ISO" ] \
+    && wget -q --show-progress -O "$IMAGES/$VM_ISO" "$VM_ISO_URL$VM_ISO" \
+    && (cd "$IMAGES" && wget -qO- "${VM_ISO_URL}SHA256SUMS" | grep " $VM_ISO\$" | sha256sum --quiet -c -); then
+  echo "OK: $IMAGES/$VM_ISO"
+  virsh pool-refresh default >/dev/null
 else
   echo "WARNING: ISO download or checksum check failed, download it later manually."
 fi
