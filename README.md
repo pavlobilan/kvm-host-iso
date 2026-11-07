@@ -8,13 +8,13 @@ Run on any Debian/Ubuntu machine or in WSL:
 curl -fsSL https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main/build-iso.sh | bash
 ```
 
-The ISO is saved to the shared folder `/srv/kvm-iso`:
+At the start the script asks the ISO file name; press Enter to keep the default `debian-<version>-kvm.iso`. The ISO is saved to the shared folder `/srv/kvm-iso`:
 
 ```
 /srv/kvm-iso/debian-<version>-kvm.iso
 ```
 
-Nothing is asked during the build, so one ISO can be used for any number of servers.
+Nothing else is asked during the build, so one ISO can be used for any number of servers.
 
 ## What is asked
 
@@ -74,7 +74,7 @@ The script installs `xorriso`, `cpio` and `wget` if they are missing, creates `/
 
 | File | Location |
 | --- | --- |
-| Built ISO | `/srv/kvm-iso/debian-<version>-kvm.iso` |
+| Built ISO | `/srv/kvm-iso/<name>.iso`, default `debian-<version>-kvm.iso` |
 | Original Debian netinst (kept for the next build) | `/srv/kvm-iso/debian-<version>-amd64-netinst.iso` |
 
 To use another folder, set `OUTDIR`, e.g. `curl ... | OUTDIR=/data/iso bash`.
@@ -91,7 +91,8 @@ From a clone:
 ```bash
 git clone https://github.com/pavlobilan/kvm-host-iso.git
 cd kvm-host-iso
-./build-iso.sh
+./build-iso.sh            # asks the ISO file name
+./build-iso.sh kvm-test   # writes /srv/kvm-iso/kvm-test.iso without asking
 ```
 
 ## Files

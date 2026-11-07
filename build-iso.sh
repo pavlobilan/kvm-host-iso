@@ -2,8 +2,8 @@
 # Build a Debian ISO for unattended installation of a KVM host.
 # Run with one command:
 #   curl -fsSL https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main/build-iso.sh | bash
-# Or from a clone of the repository: ./build-iso.sh
-# Nothing is asked during the build: the installer asks the hostname, domain, user, password,
+# Or from a clone of the repository: ./build-iso.sh [ISO_FILE_NAME]
+# Only the ISO file name is asked during the build (Enter = default); the installer asks the hostname, domain, user, password,
 # encryption and system disk, and the first boot asks the disk for VM images.
 # The ISO is written to /srv/kvm-iso (override with OUTDIR=...), readable by all users
 # and owned by the user who runs the build, also under sudo.
@@ -55,11 +55,22 @@ cd "$OUTDIR"
 # Find the current netinst, download it and verify SHA256
 SRC=$(wget -qO- "$URL" | grep -o 'debian-[0-9.]*-amd64-netinst\.iso' | head -n1)
 [ -n "$SRC" ] || { echo "Could not find netinst at $URL" >&2; exit 1; }
+
+# Name of the built ISO: argument, or asked (Enter = default); ".iso" is added if missing
+DEFAULT_OUT=${SRC%-amd64-netinst.iso}-kvm.iso
+OUT=${1:-}
+if [ -z "$OUT" ]; then
+  read -rp "ISO file name [$DEFAULT_OUT]: " OUT </dev/tty 2>/dev/null || OUT=""
+fi
+OUT=${OUT:-$DEFAULT_OUT}
+case $OUT in *.iso) ;; *) OUT=$OUT.iso ;; esac
+[[ $OUT =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.iso$ ]] || { echo "Invalid file name: $OUT (letters, digits, . _ -)" >&2; exit 1; }
+[ "$OUT" != "$SRC" ] || { echo "The name must differ from the original image $SRC" >&2; exit 1; }
+
 [ -f "$SRC" ] || wget "$URL$SRC"
 echo -n "Verifying original Debian image (SHA256)... "
 wget -qO- "${URL}SHA256SUMS" | grep " $SRC\$" | sha256sum --quiet -c - || { echo "Checksum mismatch, delete $SRC and run again" >&2; exit 1; }
 echo "OK"
-OUT=${SRC%-amd64-netinst.iso}-kvm.iso
 
 MAP=()
 
