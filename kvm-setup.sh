@@ -152,17 +152,21 @@ if ! nmcli -g NAME con show | grep -qx br0; then
   nmcli con add type bridge-slave ifname "$IF" master br0 con-name "br0-$IF"
 fi
 
-# Show the Cockpit address (IP of br0 and port) on the console login screen; agetty updates it when the IP changes
+# Show the Cockpit address (IP of br0 and port) and the router reminder on the console login screen;
+# agetty updates the IP when it changes
 mkdir -p /etc/issue.d
-cat > /etc/issue.d/kvm-host.issue <<'EOF'
-Cockpit: https://\4{br0}:9090
+cat > /etc/issue.d/kvm-host.issue <<EOF
+Cockpit: https://\\4{br0}:9090
+Router: reserve an IP for MAC $MAC and clear the Client ID field
 
 EOF
 
 touch "$DONE"
 systemctl disable kvm-setup.service 2>/dev/null || true
 
-# Reboot without confirmation, so br0 takes over the network
-whiptail --title "$TITLE" --infobox "Setup complete. Rebooting..." 7 50
-sleep 3
+# Reboot without confirmation, so br0 takes over the network; the router reminder stays on the screen for 15 s
+whiptail --title "$TITLE" --infobox "Setup complete. Rebooting in 15 s...\n\n\
+Reserve an IP on the router for MAC $MAC\n\
+and clear the Client ID field, otherwise br0 may get no IP." 10 70
+sleep 15
 reboot
