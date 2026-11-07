@@ -1,11 +1,14 @@
 # kvm-host-iso
 
-Builds a Debian ISO that installs a KVM host with minimal input.
+Builds a Debian ISO that installs a KVM host.
 
-Run on any Debian/Ubuntu machine or in WSL:
+## Automatic build
+
+All answers are given in the command; the password is asked once during the build. Run on any Debian/Ubuntu machine or in WSL:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main/build-iso.sh | bash
+curl -fsSL https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main/build-iso-auto.sh | bash -s -- \
+  --hostname kvm01 --domain example.com --user admin --system-disk /dev/sda --images-disk /dev/sdb
 ```
 
 The ISO is saved to the shared folder `/srv/kvm-iso`:
@@ -14,11 +17,38 @@ The ISO is saved to the shared folder `/srv/kvm-iso`:
 /srv/kvm-iso/debian-<version>-<hostname>.iso
 ```
 
-For example, `/srv/kvm-iso/debian-13.7.0-kvm01.iso`. All users can read it (e.g. download it with WinSCP), and the user who ran the command owns it, also when run with `sudo -i`. The last line of the output, `Done: ...`, shows the full path.
+Boot the server from it and press Enter in the boot menu. The installation, the first-boot setup and the reboot run without questions; the server powers off after the installation, so power it on again. Then reserve the IP shown on the console for the server's MAC on the router.
+
+**Both disks are erased without confirmation.** Check the disk names first, e.g. with `lsblk` from a running system or in the Hyper-V VM settings.
+
+## Advanced parameters
+
+| Option | Required | Description |
+| --- | --- | --- |
+| `--hostname NAME` | yes | Server hostname |
+| `--user NAME` | yes | Admin user, added to the `sudo` group |
+| `--system-disk DEV` | yes | Disk for Debian, e.g. `/dev/sda` |
+| `--images-disk DEV` | yes | Disk for VM images, e.g. `/dev/sdb` |
+| `--domain NAME` | no | Domain, default `localdomain` |
+| `--encrypt yes\|no` | no | Encrypt both disks, default `no`. With `yes`, the passphrases are asked during installation and on the first boot, and the system disk passphrase on every boot |
+| `--keep-images` | no | Keep an existing `vmstore` partition on the images disk (VM images from a previous installation) instead of erasing it |
+| `--password-stdin` | no | Read the password from stdin instead of asking |
+
+The password is stored in the ISO only as a SHA-512 hash. Keep the ISO private anyway: the hash can be attacked offline.
+
+## Interactive build
+
+Asks the hostname and domain during the build; the installer then asks the user, the password, the system disk and whether to encrypt, and the first boot asks the images disk.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main/build-iso.sh | bash
+```
+
+The ISO is saved to `/srv/kvm-iso` too. The last line of the output shows the full path.
 
 ## What it does
 
-During installation you only enter:
+With the interactive build you enter (the automatic build takes these from the options):
 
 - the username and password (in the installer);
 - the system disk (in the installer);
@@ -66,7 +96,7 @@ cd kvm-host-iso
 ./build-iso.sh kvm01 example.com
 ```
 
-## Install
+## Install (interactive build)
 
 1. Attach the ISO to the VM as a CD, or write it to a USB stick (Rufus: DD mode, or `dd`).
 2. Boot from it and press Enter: the boot menu has only **Install**. It waits without a timeout, so a disk left attached does not start a new installation.
@@ -104,6 +134,7 @@ Then open `https://<server-IP>:9090`, log in and turn on administrative access.
 
 | File | Purpose |
 | --- | --- |
+| `build-iso-auto.sh` | Fully automatic build: takes all answers as options and runs `build-iso.sh` |
 | `build-iso.sh` | Builds the ISO: embeds `preseed.cfg` into the installer initrd and adds the first-boot files |
 | `preseed.cfg` | Installer answers |
 | `kvm-setup.sh` | First-boot setup, installed as `/usr/local/sbin/kvm-setup` |

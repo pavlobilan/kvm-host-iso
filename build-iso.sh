@@ -5,6 +5,7 @@
 # Or from a clone of the repository: ./build-iso.sh [HOSTNAME] [DOMAIN]
 # The ISO is written to /srv/kvm-iso (override with OUTDIR=...), readable by all users
 # and owned by the user who runs the build, also under sudo.
+# build-iso-auto.sh calls this script with KVM_* variables to make a fully automatic ISO.
 set -euo pipefail
 
 REPO_RAW=${REPO_RAW:-https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main}
@@ -66,30 +67,59 @@ wget -qO- "${URL}SHA256SUMS" | grep " $SRC\$" | sha256sum --quiet -c - || { echo
 echo "OK"
 OUT=${SRC%-amd64-netinst.iso}-$HOST.iso
 
+MAP=()
+
 # Files added to the installer initrd
 EXTRA="$WORK/initrd-extra"
 mkdir -p "$EXTRA/usr/lib/finish-install.d" "$EXTRA/usr/share/kvm-host-iso"
 # preseed.cfg with the hostname and domain
 sed -e "s/kvm01/$HOST/g" -e "s/example\.com/$DOMAIN/" "$SRCDIR/preseed.cfg" > "$EXTRA/preseed.cfg"
+# Fully automatic mode (set by build-iso-auto.sh): user, password hash, system disk, no final screen
+AUTO=no
+if [ -n "${KVM_USER:-}" ]; then
+  AUTO=yes
+  cat >> "$EXTRA/preseed.cfg" <<EOF
+
+#### Added by build-iso-auto.sh
+d-i passwd/username string $KVM_USER
+d-i passwd/user-password-crypted password $KVM_PASSHASH
+d-i partman-auto/disk string $KVM_SYSTEM_DISK
+d-i finish-install/reboot_in_progress note
+EOF
+  # Encryption answer for the partman hook
+  echo "${KVM_ENCRYPT:-no}" > "$EXTRA/usr/share/kvm-host-iso/encrypt.auto"
+  # Answers for the first-boot setup, copied to /etc/kvm-setup.conf by late_command
+  printf 'AUTO=yes\nIMAGES_DISK=%s\nKEEP_IMAGES=%s\n' "$KVM_IMAGES_DISK" "${KVM_KEEP_IMAGES:-no}" > "$WORK/kvm-setup.conf"
+  MAP+=(-map "$WORK/kvm-setup.conf" /kvm-setup.conf)
+fi
+
 # Custom title, text and "Finish" button for the last screen, loaded just before 20final-message shows it
-cp "$SRCDIR/finish.templates" "$EXTRA/usr/share/kvm-host-iso/finish.templates"
-cat > "$EXTRA/usr/lib/finish-install.d/19kvm-final-message" <<'HOOK'
+# (not in automatic mode: there the installer powers off without this screen)
+if [ "$AUTO" = no ]; then
+  cp "$SRCDIR/finish.templates" "$EXTRA/usr/share/kvm-host-iso/finish.templates"
+  cat > "$EXTRA/usr/lib/finish-install.d/19kvm-final-message" <<'HOOK'
 #!/bin/sh
 . /usr/share/debconf/confmodule
 db_x_loadtemplatefile /usr/share/kvm-host-iso/finish.templates d-i || true
 db_settitle kvm-host-iso/title || true
 HOOK
-chmod 755 "$EXTRA/usr/lib/finish-install.d/19kvm-final-message"
+  chmod 755 "$EXTRA/usr/lib/finish-install.d/19kvm-final-message"
+fi
 # Encryption question: partman hook, copied to /lib/partman/init.d by preseed/early_command
 cp "$SRCDIR/encrypt.templates" "$EXTRA/usr/share/kvm-host-iso/encrypt.templates"
 cat > "$EXTRA/usr/share/kvm-host-iso/99kvm-encrypt" <<'HOOK'
 #!/bin/sh
-# Ask once (default No) and switch guided partitioning between LVM and encrypted LVM
+# Ask once (default No), or take the answer from encrypt.auto, and switch guided partitioning
+# between LVM and encrypted LVM
 . /usr/share/debconf/confmodule
-db_x_loadtemplatefile /usr/share/kvm-host-iso/encrypt.templates kvm-host-iso || true
-db_input critical kvm-host-iso/encrypt || true
-db_go || true
-db_get kvm-host-iso/encrypt
+if [ -f /usr/share/kvm-host-iso/encrypt.auto ]; then
+  [ "$(cat /usr/share/kvm-host-iso/encrypt.auto)" = yes ] && RET=true || RET=false
+else
+  db_x_loadtemplatefile /usr/share/kvm-host-iso/encrypt.templates kvm-host-iso || true
+  db_input critical kvm-host-iso/encrypt || true
+  db_go || true
+  db_get kvm-host-iso/encrypt
+fi
 if [ "$RET" = true ]; then
   db_set partman-auto/method crypto
   db_set partman-auto/init_automatically_partition some_device_crypto
@@ -101,7 +131,6 @@ exit 0
 HOOK
 
 # Append the extra files to the initrd of the text and graphical installers
-MAP=()
 for i in install.amd/initrd.gz install.amd/gtk/initrd.gz; do
   f="$WORK/$(echo "$i" | tr / _)"
   xorriso -osirrox on -indev "$SRC" -extract "/$i" "$f" 2>/dev/null

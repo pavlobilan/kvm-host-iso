@@ -10,6 +10,10 @@ TITLE="KVM host setup"
 [ "$(id -u)" -eq 0 ] || { echo "Run as root: sudo $0" >&2; exit 1; }
 [ -e "$DONE" ] && { echo "Setup already completed ($DONE)."; exit 0; }
 
+# Answers of a fully automatic ISO (build-iso-auto.sh); without this file every step is asked
+AUTO=no; IMAGES_DISK=""; KEEP_IMAGES=no
+[ -f /etc/kvm-setup.conf ] && . /etc/kvm-setup.conf
+
 # First regular user created by the installer
 ADMIN=$(getent passwd 1000 | cut -d: -f1)
 
@@ -29,8 +33,18 @@ if [ ${#MENU[@]} -eq 0 ]; then
   exit 1
 fi
 
-DISK=$(whiptail --title "$TITLE" --menu "Select the disk for VM images (system disk: $ROOT_DISK)" 20 78 10 \
-  "${MENU[@]}" 3>&1 1>&2 2>&3) || { echo "Cancelled. Run again: sudo kvm-setup"; exit 1; }
+# Preset disk (automatic mode) if it exists and is not the system disk, otherwise ask
+DISK=""
+if [ "$AUTO" = yes ] && [ -n "$IMAGES_DISK" ]; then
+  d=$(readlink -f "$IMAGES_DISK" || true)
+  for ((k=0; k<${#MENU[@]}; k+=2)); do [ "${MENU[k]}" = "$d" ] && DISK=$d; done
+  [ -n "$DISK" ] || whiptail --title "$TITLE" --msgbox "Disk $IMAGES_DISK not found or it is the system disk.\n\nSelect the disk manually." 10 70
+fi
+if [ -z "$DISK" ]; then
+  AUTO=no
+  DISK=$(whiptail --title "$TITLE" --menu "Select the disk for VM images (system disk: $ROOT_DISK)" 20 78 10 \
+    "${MENU[@]}" 3>&1 1>&2 2>&3) || { echo "Cancelled. Run again: sudo kvm-setup"; exit 1; }
+fi
 
 # Encrypt the images disk only when the system disk is encrypted: its key file is stored there
 ENCRYPT=no
@@ -63,6 +77,8 @@ KEEP=no
 if [ -n "$PART" ]; then
   if [ "$PTYPE" = crypto_LUKS ] && [ "$ENCRYPT" = no ]; then
     whiptail --title "$TITLE" --msgbox "Found encrypted vmstore partition $PART, but the system disk is not encrypted, so it cannot be unlocked at boot.\n\nThe disk can only be erased." 12 70
+  elif [ "$AUTO" = yes ]; then
+    KEEP=$KEEP_IMAGES
   elif whiptail --title "$TITLE" --yesno \
     "Found existing vmstore partition $PART.\n\nKeep its data?\n(No = erase the whole disk)" 12 70; then
     KEEP=yes
@@ -70,8 +86,10 @@ if [ -n "$PART" ]; then
 fi
 
 if [ "$KEEP" = no ]; then
-  whiptail --title "$TITLE" --defaultno --yesno "ALL DATA on $DISK will be erased.\n\nContinue?" 10 70 \
-    || { echo "Cancelled. Run again: sudo kvm-setup"; exit 1; }
+  if [ "$AUTO" = no ]; then
+    whiptail --title "$TITLE" --defaultno --yesno "ALL DATA on $DISK will be erased.\n\nContinue?" 10 70 \
+      || { echo "Cancelled. Run again: sudo kvm-setup"; exit 1; }
+  fi
   if [ "$ENCRYPT" = yes ]; then
     ask_new_passphrase || { echo "Cancelled. Run again: sudo kvm-setup"; exit 1; }
   fi
@@ -156,9 +174,14 @@ fi
 touch "$DONE"
 systemctl disable kvm-setup.service 2>/dev/null || true
 
-whiptail --title "$TITLE" --msgbox "Setup complete.\n\n\
-Reserve an IP on the router for MAC $MAC and clear the Client ID field.\n\
+MSG="Reserve an IP on the router for MAC $MAC and clear the Client ID field.\n\
 IP before reboot: ${IP:-unknown}\n\n\
-After reboot open https://<server-IP>:9090 and turn on administrative access.\n\n\
-Press OK to reboot." 16 76
+After reboot open https://<server-IP>:9090 and turn on administrative access."
+if [ "$AUTO" = yes ]; then
+  # No confirmation: show the MAC for 60 s, then reboot
+  whiptail --title "$TITLE" --infobox "Setup complete. Rebooting in 60 s.\n\n$MSG" 12 76
+  sleep 60
+else
+  whiptail --title "$TITLE" --msgbox "Setup complete.\n\n$MSG\n\nPress OK to reboot." 16 76
+fi
 reboot
