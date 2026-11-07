@@ -20,7 +20,7 @@ Nothing else is asked during the build, so one ISO can be used for any number of
 
 In the installer:
 
-- hostname (default `kvm-host`) and domain;
+- hostname (default `kvmhost`) and domain;
 - user name and password (the user is added to the `sudo` group, root login is disabled);
 - whether to encrypt the disks (default **No**) and, if yes, the passphrase;
 - the system disk.
