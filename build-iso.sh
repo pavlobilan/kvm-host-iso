@@ -22,7 +22,7 @@ OUT=${1:-}
 if [ -z "$OUT" ]; then
   # Ask on the terminal (stdin is the script itself under curl | bash); no terminal = default name
   if (exec </dev/tty) 2>/dev/null; then
-    read -rp "ISO file name [debian-<version>-kvm.iso]: " OUT </dev/tty || OUT=""
+    read -rp "ISO file name (press Enter for debian-<version>-kvm.iso): " OUT </dev/tty || OUT=""
   fi
 fi
 if [ -n "$OUT" ]; then
@@ -160,6 +160,7 @@ done
 
 # Write the new ISO, keeping the original boot records
 rm -f "$OUT"
+[ -f "$OUT" ] && echo "$OUT already exists and will be overwritten."
 echo "Building $OUT (about a minute)..."
 xorriso -indev "$SRC" -outdev "$OUT" "${MAP[@]}" \
   -map "$SRCDIR/kvm-setup.sh" /kvm-setup.sh \

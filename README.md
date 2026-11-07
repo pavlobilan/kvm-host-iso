@@ -8,7 +8,7 @@ Run on any Debian/Ubuntu machine or in WSL:
 curl -fsSL https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main/build-iso.sh | bash
 ```
 
-At the start the script asks the ISO file name; press Enter to keep the default `debian-<version>-kvm.iso`. The ISO is saved to the shared folder `/srv/kvm-iso`:
+At the start the script asks the ISO file name; press Enter to keep the default `debian-<version>-kvm.iso`. A file with the same name is overwritten. The ISO is saved to the shared folder `/srv/kvm-iso`:
 
 ```
 /srv/kvm-iso/debian-<version>-kvm.iso
