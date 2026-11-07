@@ -164,9 +164,9 @@ EOF
 touch "$DONE"
 systemctl disable kvm-setup.service 2>/dev/null || true
 
-# Reboot without confirmation, so br0 takes over the network; the router reminder stays on the screen for 15 s
-whiptail --title "$TITLE" --infobox "Setup complete. Rebooting in 15 s...\n\n\
+# Wait (no timeout) until the IP is reserved on the router, then reboot so br0 gets the reserved IP
+whiptail --title "$TITLE" --ok-button "Reboot" --msgbox "Setup complete.\n\n\
 Reserve an IP on the router for MAC $MAC\n\
-and clear the Client ID field, otherwise br0 may get no IP." 10 70
-sleep 15
+and clear the Client ID field.\n\n\
+Then press Enter to reboot." 13 70
 reboot

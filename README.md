@@ -47,7 +47,7 @@ On the first boot:
 2. Boot from it and press Enter: the boot menu has only **Install**. It waits without a timeout, so a disk left attached does not start a new installation.
 3. Answer the installer questions. The rest of the installation runs without questions; at the end the installer ejects the ISO and reboots the server. Remove a USB stick if you used one.
 4. On the first boot, select the disk for VM images on the console (tty1) and confirm erasing it. If the disk already has a `vmstore` partition from a previous installation, you can keep its data instead.
-5. Before rebooting, the console shows for 15 s the MAC to reserve on the router. Reserve an IP for this MAC and clear the Client ID field there: after the move to `br0` the server sends a new Client ID, and a reservation with the old one may leave it without an IP.
+5. The console shows the MAC and waits without a timeout. Reserve an IP for this MAC on the router and clear the Client ID field there (after the move to `br0` the server sends a new Client ID, and a reservation with the old one may leave it without an IP), then press Enter to reboot.
 6. After the reboot the console login screen shows the Cockpit address and the same reminder, e.g. `Cockpit: https://192.0.2.10:9090`.
 7. Open the Cockpit address, log in and turn on administrative access.
 
