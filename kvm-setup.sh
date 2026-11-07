@@ -180,5 +180,7 @@ EOF
 touch "$DONE"
 systemctl disable kvm-setup.service 2>/dev/null || true
 
-# Reboot right away, so br0 takes over the network
+# Reboot without confirmation, so br0 takes over the network
+whiptail --title "$TITLE" --infobox "Setup complete. Rebooting..." 7 50
+sleep 3
 reboot
