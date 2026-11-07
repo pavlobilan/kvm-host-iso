@@ -4,7 +4,7 @@ Builds a Debian ISO that installs a KVM host.
 
 ## Automatic build
 
-The disks, encryption and domain are given in the command. The installer asks only the hostname, the user name and the password. Run on any Debian/Ubuntu machine or in WSL:
+The disks are given in the command. The installer asks only the hostname, the domain, the user name, the password and whether to encrypt the disks (default **No**). Run on any Debian/Ubuntu machine or in WSL:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main/build-iso-auto.sh | bash -s -- \
@@ -17,7 +17,7 @@ The ISO is saved to the shared folder `/srv/kvm-iso`:
 /srv/kvm-iso/debian-<version>-kvm-auto.iso
 ```
 
-Boot the server from it, press Enter in the boot menu and enter the hostname, the user name and the password. The rest of the installation, the first-boot setup and the reboot run without questions; the server powers off after the installation, so power it on again. Then reserve the IP for the MAC shown on the console on the router.
+Boot the server from it, press Enter in the boot menu and answer these questions. The rest of the installation, the first-boot setup and the reboot run without questions; the server powers off after the installation, so power it on again. Then reserve the IP for the MAC shown on the console on the router.
 
 **Both disks are erased without confirmation.** Check the disk names first, e.g. with `lsblk` from a running system or in the Hyper-V VM settings.
 
@@ -27,11 +27,9 @@ Boot the server from it, press Enter in the boot menu and enter the hostname, th
 | --- | --- | --- |
 | `--system-disk DEV` | yes | Disk for Debian, e.g. `/dev/sda` |
 | `--images-disk DEV` | yes | Disk for VM images, e.g. `/dev/sdb` |
-| `--domain NAME` | no | Domain, default `localdomain` |
-| `--encrypt yes\|no` | no | Encrypt both disks, default `no`. With `yes`, the passphrases are asked during installation and on the first boot, and the system disk passphrase on every boot |
 | `--keep-images` | no | Keep an existing `vmstore` partition on the images disk (VM images from a previous installation) instead of erasing it |
 
-The ISO holds no password, so one ISO can be used for several servers with the same disk layout.
+The ISO holds no hostname, domain or password, so one ISO can be used for several servers with the same disk layout. With encryption, the passphrases are asked during installation and on the first boot, and the system disk passphrase on every boot.
 
 ## Interactive build
 
@@ -131,7 +129,7 @@ Then open `https://<server-IP>:9090`, log in and turn on administrative access.
 
 | File | Purpose |
 | --- | --- |
-| `build-iso-auto.sh` | Automatic build: takes the disks, encryption and domain as options and runs `build-iso.sh` |
+| `build-iso-auto.sh` | Automatic build: takes the disks as options and runs `build-iso.sh` |
 | `build-iso.sh` | Builds the ISO: embeds `preseed.cfg` into the installer initrd and adds the first-boot files |
 | `preseed.cfg` | Installer answers |
 | `kvm-setup.sh` | First-boot setup, installed as `/usr/local/sbin/kvm-setup` |

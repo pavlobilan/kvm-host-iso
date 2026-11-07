@@ -51,10 +51,10 @@ fi
 cd "$OUTDIR"
 
 # Hostname and domain: from arguments or prompt (via /dev/tty, since stdin is the script under curl | bash).
-# In automatic mode (KVM_AUTO=yes from build-iso-auto.sh) the installer asks the hostname instead.
+# In automatic mode (KVM_AUTO=yes from build-iso-auto.sh) the installer asks the hostname and domain instead.
 AUTO=${KVM_AUTO:-no}
 if [ "$AUTO" = yes ]; then
-  HOST=kvm01; DOMAIN=${KVM_DOMAIN:-localdomain}
+  HOST=kvm01; DOMAIN=example.com
 else
   HOST=${1:-}; DOMAIN=${2:-}
   [ -n "$HOST" ]   || read -rp "Hostname [kvm01]: " HOST </dev/tty
@@ -80,18 +80,16 @@ EXTRA="$WORK/initrd-extra"
 mkdir -p "$EXTRA/usr/lib/finish-install.d" "$EXTRA/usr/share/kvm-host-iso"
 # preseed.cfg with the hostname and domain
 sed -e "s/kvm01/$HOST/g" -e "s/example\.com/$DOMAIN/" "$SRCDIR/preseed.cfg" > "$EXTRA/preseed.cfg"
-# Automatic mode (build-iso-auto.sh): the installer asks only the hostname, the user and the password;
-# the system disk, encryption and images disk come from the options, and there is no final screen
+# Automatic mode (build-iso-auto.sh): the installer asks only the hostname, domain, user, password and
+# encryption; the system disk and images disk come from the options, and there is no final screen
 if [ "$AUTO" = yes ]; then
-  sed -i -e '/^d-i netcfg\/get_hostname /d' -e '/^d-i netcfg\/hostname /d' "$EXTRA/preseed.cfg"
+  sed -i -e '/^d-i netcfg\/get_hostname /d' -e '/^d-i netcfg\/hostname /d' -e '/^d-i netcfg\/get_domain /d' "$EXTRA/preseed.cfg"
   cat >> "$EXTRA/preseed.cfg" <<EOF
 
 #### Added by build-iso-auto.sh
 d-i partman-auto/disk string $KVM_SYSTEM_DISK
 d-i finish-install/reboot_in_progress note
 EOF
-  # Encryption answer for the partman hook
-  echo "${KVM_ENCRYPT:-no}" > "$EXTRA/usr/share/kvm-host-iso/encrypt.auto"
   # Answers for the first-boot setup, copied to /etc/kvm-setup.conf by late_command
   printf 'AUTO=yes\nIMAGES_DISK=%s\nKEEP_IMAGES=%s\n' "$KVM_IMAGES_DISK" "${KVM_KEEP_IMAGES:-no}" > "$WORK/kvm-setup.conf"
   MAP+=(-map "$WORK/kvm-setup.conf" /kvm-setup.conf)
