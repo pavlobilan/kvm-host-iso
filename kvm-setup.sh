@@ -5,7 +5,6 @@ set -euo pipefail
 
 IMAGES=/var/lib/libvirt/images
 DONE=/var/lib/kvm-setup.done
-VM_ISO_URL=https://cdimage.debian.org/cdimage/archive/latest-oldstable/amd64/iso-cd/
 TITLE="KVM host setup"
 
 [ "$(id -u)" -eq 0 ] || { echo "Run as root: sudo $0" >&2; exit 1; }
@@ -136,18 +135,6 @@ systemctl restart libvirtd
 virsh pool-info default &>/dev/null || virsh pool-define-as default dir --target "$IMAGES" >/dev/null
 virsh pool-autostart default >/dev/null
 virsh pool-info default | grep -q 'State:.*running' || virsh pool-start default >/dev/null
-
-# Download the Debian netinst ISO for VMs (only debian-<version>-amd64-netinst.iso, not debian-edu etc.) and verify SHA256
-echo "Downloading Debian netinst ISO for VMs..."
-VM_ISO=$(wget -qO- "$VM_ISO_URL" | grep -o 'debian-[0-9.]*-amd64-netinst\.iso' | head -n1 || true)
-if [ -n "$VM_ISO" ] \
-    && wget -q --show-progress -O "$IMAGES/$VM_ISO" "$VM_ISO_URL$VM_ISO" \
-    && (cd "$IMAGES" && wget -qO- "${VM_ISO_URL}SHA256SUMS" | grep " $VM_ISO\$" | sha256sum --quiet -c -); then
-  echo "OK: $IMAGES/$VM_ISO"
-  virsh pool-refresh default >/dev/null
-else
-  echo "WARNING: ISO download or checksum check failed, download it later manually."
-fi
 
 # Network interface of the default route
 IF=$(ip -o route show default | awk '{print $5; exit}')

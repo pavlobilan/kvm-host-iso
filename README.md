@@ -32,7 +32,6 @@ Everything else is configured automatically:
 - KVM, libvirt, Cockpit;
 - the images disk formatted as ext4 (label `vmstore`) and mounted by UUID at `/var/lib/libvirt/images`;
 - libvirt storage pool `default`;
-- Debian netinst ISO for new VMs;
 - login on serial port `ttyS0` (`serial-getty@ttyS0`);
 - bridge `br0` under NetworkManager with the NIC's MAC and a MAC-based DHCP Client ID.
 
@@ -81,9 +80,8 @@ The setup runs on the server console (tty1), not over SSH.
 1. Select the disk for VM images. The system disk is not listed.
 2. If the disk already has a `vmstore` partition, choose **Yes** to keep its data or **No** to erase it.
 3. Confirm erasing the disk. If the system disk is encrypted, enter a passphrase for the images disk: it is unlocked at boot by a key file on the system disk, and the passphrase is needed only to keep its data after a reinstall.
-4. Wait for the Debian ISO for VMs to download.
-5. The final screen shows the MAC address. Reserve an IP for this MAC on the router and clear the Client ID field there.
-6. Press **OK**. The server reboots and gets the reserved IP on `br0`.
+4. The final screen shows the MAC address. Reserve an IP for this MAC on the router and clear the Client ID field there.
+5. Press **OK**. The server reboots and gets the reserved IP on `br0`.
 
 If the setup was cancelled, run it again with `sudo kvm-setup`.
 
