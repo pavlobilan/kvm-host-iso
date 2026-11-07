@@ -50,11 +50,17 @@ if [ ! -d "$OUTDIR" ] || [ ! -w "$OUTDIR" ]; then
 fi
 cd "$OUTDIR"
 
-# Hostname and domain: from arguments or prompt (via /dev/tty, since stdin is the script under curl | bash)
-HOST=${1:-}; DOMAIN=${2:-}
-[ -n "$HOST" ]   || read -rp "Hostname [kvm01]: " HOST </dev/tty
-[ -n "$DOMAIN" ] || read -rp "Domain [example.com]: " DOMAIN </dev/tty
-HOST=${HOST:-kvm01}; DOMAIN=${DOMAIN:-example.com}
+# Hostname and domain: from arguments or prompt (via /dev/tty, since stdin is the script under curl | bash).
+# In automatic mode (KVM_AUTO=yes from build-iso-auto.sh) the installer asks the hostname instead.
+AUTO=${KVM_AUTO:-no}
+if [ "$AUTO" = yes ]; then
+  HOST=kvm01; DOMAIN=${KVM_DOMAIN:-localdomain}
+else
+  HOST=${1:-}; DOMAIN=${2:-}
+  [ -n "$HOST" ]   || read -rp "Hostname [kvm01]: " HOST </dev/tty
+  [ -n "$DOMAIN" ] || read -rp "Domain [example.com]: " DOMAIN </dev/tty
+  HOST=${HOST:-kvm01}; DOMAIN=${DOMAIN:-example.com}
+fi
 [[ $HOST =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]] || { echo "Invalid hostname: $HOST" >&2; exit 1; }
 [[ $DOMAIN =~ ^[a-zA-Z0-9.-]+$ ]] || { echo "Invalid domain: $DOMAIN" >&2; exit 1; }
 
@@ -65,7 +71,7 @@ SRC=$(wget -qO- "$URL" | grep -o 'debian-[0-9.]*-amd64-netinst\.iso' | head -n1)
 echo -n "Verifying original Debian image (SHA256)... "
 wget -qO- "${URL}SHA256SUMS" | grep " $SRC\$" | sha256sum --quiet -c - || { echo "Checksum mismatch, delete $SRC and run again" >&2; exit 1; }
 echo "OK"
-OUT=${SRC%-amd64-netinst.iso}-$HOST.iso
+if [ "$AUTO" = yes ]; then OUT=${SRC%-amd64-netinst.iso}-kvm-auto.iso; else OUT=${SRC%-amd64-netinst.iso}-$HOST.iso; fi
 
 MAP=()
 
@@ -74,15 +80,13 @@ EXTRA="$WORK/initrd-extra"
 mkdir -p "$EXTRA/usr/lib/finish-install.d" "$EXTRA/usr/share/kvm-host-iso"
 # preseed.cfg with the hostname and domain
 sed -e "s/kvm01/$HOST/g" -e "s/example\.com/$DOMAIN/" "$SRCDIR/preseed.cfg" > "$EXTRA/preseed.cfg"
-# Fully automatic mode (set by build-iso-auto.sh): user, password hash, system disk, no final screen
-AUTO=no
-if [ -n "${KVM_USER:-}" ]; then
-  AUTO=yes
+# Automatic mode (build-iso-auto.sh): the installer asks only the hostname, the user and the password;
+# the system disk, encryption and images disk come from the options, and there is no final screen
+if [ "$AUTO" = yes ]; then
+  sed -i -e '/^d-i netcfg\/get_hostname /d' -e '/^d-i netcfg\/hostname /d' "$EXTRA/preseed.cfg"
   cat >> "$EXTRA/preseed.cfg" <<EOF
 
 #### Added by build-iso-auto.sh
-d-i passwd/username string $KVM_USER
-d-i passwd/user-password-crypted password $KVM_PASSHASH
 d-i partman-auto/disk string $KVM_SYSTEM_DISK
 d-i finish-install/reboot_in_progress note
 EOF
