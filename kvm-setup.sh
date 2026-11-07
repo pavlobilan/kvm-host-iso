@@ -157,7 +157,6 @@ virsh pool-info default | grep -q 'State:.*running' || virsh pool-start default 
 # Network interface of the default route
 IF=$(ip -o route show default | awk '{print $5; exit}')
 MAC=$(cat "/sys/class/net/$IF/address")
-IP=$(ip -4 -o addr show "$IF" | awk '{print $4; exit}')
 
 # Hand the interface over from ifupdown to NetworkManager and create bridge br0 with its MAC
 sed -i -e "s/^allow-hotplug $IF/#&/" -e "s/^auto $IF/#&/" -e "s/^iface $IF/#&/" /etc/network/interfaces
@@ -171,17 +170,17 @@ if ! nmcli -g NAME con show | grep -qx br0; then
   nmcli con add type bridge-slave ifname "$IF" master br0 con-name "br0-$IF"
 fi
 
+# Show the Cockpit address (IP of br0 and port) on the console login screen; agetty updates it when the IP changes
+mkdir -p /etc/issue.d
+cat > /etc/issue.d/kvm-host.issue <<'EOF'
+Cockpit: https://\4{br0}:9090
+
+EOF
+
 touch "$DONE"
 systemctl disable kvm-setup.service 2>/dev/null || true
 
-MSG="Reserve an IP on the router for MAC $MAC and clear the Client ID field.\n\
-IP before reboot: ${IP:-unknown}\n\n\
-After reboot open https://<server-IP>:9090 and turn on administrative access."
-if [ "$AUTO" = yes ]; then
-  # No confirmation: show the MAC for 60 s, then reboot
-  whiptail --title "$TITLE" --infobox "Setup complete. Rebooting in 60 s.\n\n$MSG" 12 76
-  sleep 60
-else
-  whiptail --title "$TITLE" --msgbox "Setup complete.\n\n$MSG\n\nPress OK to reboot." 16 76
-fi
+# Reboot without confirmation, so br0 takes over the network
+whiptail --title "$TITLE" --infobox "Setup complete. Rebooting..." 7 50
+sleep 3
 reboot

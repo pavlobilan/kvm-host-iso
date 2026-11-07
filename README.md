@@ -17,7 +17,7 @@ The ISO is saved to the shared folder `/srv/kvm-iso`:
 /srv/kvm-iso/debian-<version>-kvm-auto.iso
 ```
 
-Boot the server from it, press Enter in the boot menu and answer these questions. The rest of the installation runs without questions. At the end the installer ejects the ISO and reboots the server; the first-boot setup and the next reboot run without questions. Then reserve the IP for the MAC shown on the console on the router.
+Boot the server from it, press Enter in the boot menu and answer these questions. The rest of the installation runs without questions. At the end the installer ejects the ISO and reboots the server; the first-boot setup and the next reboot run without questions. The console login screen then shows the Cockpit address, e.g. `Cockpit: https://192.0.2.10:9090`.
 
 **Both disks are erased without confirmation.** Check the disk names first, e.g. with `lsblk` from a running system or in the Hyper-V VM settings.
 
@@ -105,8 +105,8 @@ The setup runs on the server console (tty1), not over SSH.
 1. Select the disk for VM images. The system disk is not listed.
 2. If the disk already has a `vmstore` partition, choose **Yes** to keep its data or **No** to erase it.
 3. Confirm erasing the disk. If the system disk is encrypted, enter a passphrase for the images disk: it is unlocked at boot by a key file on the system disk, and the passphrase is needed only to keep its data after a reinstall.
-4. The final screen shows the MAC address. Reserve an IP for this MAC on the router and clear the Client ID field there.
-5. Press **OK**. The server reboots and gets the reserved IP on `br0`.
+4. The server reboots without confirmation and gets an IP on `br0` by DHCP.
+5. The console login screen shows the Cockpit address with the IP and port, e.g. `Cockpit: https://192.0.2.10:9090`. To keep this IP, reserve it on the router for the server's MAC (`ip link show br0`) and clear the Client ID field there.
 
 If the setup was cancelled, run it again with `sudo kvm-setup`.
 
