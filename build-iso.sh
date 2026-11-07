@@ -144,6 +144,8 @@ for i in boot/grub/grub.cfg isolinux/isolinux.cfg isolinux/menu.cfg isolinux/txt
           d = gsub(/{/, "{") - gsub(/}/, "}"); if (d > 0) skip = 1; next }
         { print }' "$f" > "$f.new" && mv "$f.new" "$f"
       sed -i "s#\(/install.amd/vmlinuz\)#\1 $BOOTARGS#" "$f"
+      # Show a message while the kernel and the installer load (the screen is otherwise blank)
+      sed -i "/^[[:space:]]*menuentry.*'Install'.*{/a\\    echo 'Loading the installer, please wait...'" "$f"
       printf '\nset timeout=-1\nset default="Install"\n' >> "$f" ;;
     isolinux/isolinux.cfg)
       # BIOS: no timeout (0 = wait for Enter)
