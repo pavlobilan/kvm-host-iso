@@ -2,113 +2,58 @@
 
 Builds a Debian ISO that installs a KVM host.
 
-## Automatic build
-
-The disks are given in the command. The installer asks only the hostname, the domain, the user name, the password and whether to encrypt the disks (default **No**). Run on any Debian/Ubuntu machine or in WSL:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main/build-iso-auto.sh | bash -s -- \
-  --system-disk /dev/sda --images-disk /dev/sdb
-```
-
-The ISO is saved to the shared folder `/srv/kvm-iso`:
-
-```
-/srv/kvm-iso/debian-<version>-kvm-auto.iso
-```
-
-Boot the server from it, press Enter in the boot menu and answer these questions. The rest of the installation runs without questions. At the end the installer ejects the ISO and reboots the server; the first-boot setup and the next reboot run without questions. The console login screen then shows the Cockpit address, e.g. `Cockpit: https://192.0.2.10:9090`.
-
-**Both disks are erased without confirmation.** Check the disk names first, e.g. with `lsblk` from a running system or in the Hyper-V VM settings.
-
-## Advanced parameters
-
-| Option | Required | Description |
-| --- | --- | --- |
-| `--system-disk DEV` | yes | Disk for Debian, e.g. `/dev/sda` |
-| `--images-disk DEV` | yes | Disk for VM images, e.g. `/dev/sdb` |
-| `--keep-images` | no | Keep an existing `vmstore` partition on the images disk (VM images from a previous installation) instead of erasing it |
-
-The ISO holds no hostname, domain or password, so one ISO can be used for several servers with the same disk layout. With encryption, the passphrases are asked during installation and on the first boot, and the system disk passphrase on every boot.
-
-## Interactive build
-
-Asks the hostname and domain during the build; the installer then asks the user, the password, the system disk and whether to encrypt, and the first boot asks the images disk.
+Run on any Debian/Ubuntu machine or in WSL:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main/build-iso.sh | bash
 ```
 
-The ISO is saved to `/srv/kvm-iso` too. The last line of the output shows the full path.
+The ISO is saved to the shared folder `/srv/kvm-iso`:
 
-## What it does
+```
+/srv/kvm-iso/debian-<version>-kvm.iso
+```
 
-With the interactive build you enter (the automatic build takes these from the options):
+Nothing is asked during the build, so one ISO can be used for any number of servers.
 
-- the username and password (in the installer);
-- the system disk (in the installer);
-- whether to encrypt the disks (in the installer, default **No**) and, if yes, the passphrases;
-- the disk for VM images (on the console after the first boot).
+## What is asked
 
-Everything else is configured automatically:
+In the installer:
+
+- hostname and domain;
+- user name and password (the user is added to the `sudo` group, root login is disabled);
+- whether to encrypt the disks (default **No**) and, if yes, the passphrase;
+- the system disk.
+
+On the first boot:
+
+- the disk for VM images, and a confirmation that it will be erased;
+- with encryption, a passphrase for the images disk.
+
+## What is configured automatically
 
 - LVM on the whole system disk (encrypted LVM if chosen);
 - SSH, sudo, full upgrade, time zone Europe/Kyiv;
 - KVM, libvirt, Cockpit;
-- the images disk formatted as ext4 (label `vmstore`) and mounted by UUID at `/var/lib/libvirt/images`;
+- the images disk formatted as ext4 (label `vmstore`) and mounted at `/var/lib/libvirt/images`;
 - libvirt storage pool `default`;
-- login on serial port `ttyS0` (`serial-getty@ttyS0`);
-- bridge `br0` under NetworkManager with the NIC's MAC and a MAC-based DHCP Client ID.
+- login on serial port `ttyS0`;
+- bridge `br0` under NetworkManager with the NIC's MAC and a MAC-based DHCP Client ID;
+- the Cockpit address with the IP and port on the console login screen.
 
-## Build details
-
-The script installs `xorriso`, `cpio` and `wget` if they are missing, creates `/srv/kvm-iso` (with `sudo` the first time), asks for the hostname and domain, downloads the current Debian netinst, verifies its SHA256 and builds the ISO.
-
-| File | Location |
-| --- | --- |
-| Built ISO | `/srv/kvm-iso/debian-<version>-<hostname>.iso` |
-| Original Debian netinst (kept for the next build) | `/srv/kvm-iso/debian-<version>-amd64-netinst.iso` |
-
-To use another folder, set `OUTDIR`, e.g. `curl ... | OUTDIR=/data/iso bash`.
-
-```bash
-# List the built ISO files
-ls -lh /srv/kvm-iso/*.iso
-```
-
-In WSL, open the folder in Windows Explorer at `\\wsl$\<distribution>\srv\kvm-iso`, or copy the ISO to Windows:
-
-```bash
-# Copy the ISO to the Windows Downloads folder (replace <WINUSER> with the folder name in C:\Users)
-cp /srv/kvm-iso/debian-<version>-<hostname>.iso /mnt/c/Users/<WINUSER>/Downloads/
-```
-
-From a clone, the hostname and domain can be passed as arguments:
-
-```bash
-git clone https://github.com/pavlobilan/kvm-host-iso.git
-cd kvm-host-iso
-./build-iso.sh kvm01 example.com
-```
-
-## Install (interactive build)
+## Install
 
 1. Attach the ISO to the VM as a CD, or write it to a USB stick (Rufus: DD mode, or `dd`).
 2. Boot from it and press Enter: the boot menu has only **Install**. It waits without a timeout, so a disk left attached does not start a new installation.
-3. Enter the username and the password twice, answer the encryption question (Enter keeps **No**), then select the system disk. With encryption, the installer also asks for the disk passphrase. Installation continues unattended; at the end the installer ejects the ISO and reboots the server.
-4. If you installed from a USB stick, remove it while the server reboots. If the boot menu of the ISO appears again, the ISO was not detached: detach it and reboot.
+3. Answer the installer questions. The rest of the installation runs without questions; at the end the installer ejects the ISO and reboots the server. Remove a USB stick if you used one.
+4. On the first boot, select the disk for VM images on the console (tty1) and confirm erasing it. If the disk already has a `vmstore` partition from a previous installation, you can keep its data instead.
+5. The server reboots and the console login screen shows the Cockpit address, e.g. `Cockpit: https://192.0.2.10:9090`.
+6. To keep this IP, reserve it on the router for the server's MAC (`ip link show br0`) and clear the Client ID field there.
+7. Open the Cockpit address, log in and turn on administrative access.
 
-## First boot
+If the first-boot setup was cancelled, run it again with `sudo kvm-setup`.
 
-The setup runs on the server console (tty1), not over SSH.
-
-1. Select the disk for VM images. The system disk is not listed.
-2. If the disk already has a `vmstore` partition, choose **Yes** to keep its data or **No** to erase it.
-3. Confirm erasing the disk. If the system disk is encrypted, enter a passphrase for the images disk: it is unlocked at boot by a key file on the system disk, and the passphrase is needed only to keep its data after a reinstall.
-4. The server reboots without confirmation and gets an IP on `br0` by DHCP.
-5. The console login screen shows the Cockpit address with the IP and port, e.g. `Cockpit: https://192.0.2.10:9090`. To keep this IP, reserve it on the router for the server's MAC (`ip link show br0`) and clear the Client ID field there.
-
-If the setup was cancelled, run it again with `sudo kvm-setup`.
+With encryption, the images disk is unlocked at boot by a key file on the system disk; its passphrase is needed only to keep the data after a reinstall. The system disk passphrase is asked on every boot.
 
 ## Check
 
@@ -119,19 +64,42 @@ findmnt /var/lib/libvirt/images
 # Pool "default" is active and autostarted
 sudo virsh pool-list --all
 
-# br0 has the reserved IP
+# br0 has the IP
 ip -br a show br0
 ```
 
-Then open `https://<server-IP>:9090`, log in and turn on administrative access.
+## Build details
+
+The script installs `xorriso`, `cpio` and `wget` if they are missing, creates `/srv/kvm-iso` (with `sudo` the first time), downloads the current Debian netinst, verifies its SHA256 and builds the ISO. The folder and files are readable by all users and owned by the user who runs the build, also when run with `sudo -i`.
+
+| File | Location |
+| --- | --- |
+| Built ISO | `/srv/kvm-iso/debian-<version>-kvm.iso` |
+| Original Debian netinst (kept for the next build) | `/srv/kvm-iso/debian-<version>-amd64-netinst.iso` |
+
+To use another folder, set `OUTDIR`, e.g. `curl ... | OUTDIR=/data/iso bash`.
+
+In WSL, open the folder in Windows Explorer at `\\wsl$\<distribution>\srv\kvm-iso`, or copy the ISO to Windows:
+
+```bash
+# Copy the ISO to the Windows Downloads folder (replace <WINUSER> with the folder name in C:\Users)
+cp /srv/kvm-iso/debian-<version>-kvm.iso /mnt/c/Users/<WINUSER>/Downloads/
+```
+
+From a clone:
+
+```bash
+git clone https://github.com/pavlobilan/kvm-host-iso.git
+cd kvm-host-iso
+./build-iso.sh
+```
 
 ## Files
 
 | File | Purpose |
 | --- | --- |
-| `build-iso-auto.sh` | Automatic build: takes the disks as options and runs `build-iso.sh` |
 | `build-iso.sh` | Builds the ISO: embeds `preseed.cfg` into the installer initrd and adds the first-boot files |
 | `preseed.cfg` | Installer answers |
+| `encrypt.templates` | Installer question whether to encrypt the disks |
 | `kvm-setup.sh` | First-boot setup, installed as `/usr/local/sbin/kvm-setup` |
 | `kvm-setup.service` | Runs `kvm-setup` once on tty1 |
-| `encrypt.templates` | Installer question whether to encrypt the disks |
