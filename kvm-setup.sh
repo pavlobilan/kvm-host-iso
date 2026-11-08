@@ -10,6 +10,11 @@ TITLE="KVM host setup"
 [ "$(id -u)" -eq 0 ] || { echo "Run as root: sudo $0" >&2; exit 1; }
 [ -e "$DONE" ] && { echo "Setup already completed ($DONE)."; exit 0; }
 
+# Stop systemd status lines and kernel messages on the console while the dialogs are shown
+kill -s SIGRTMIN+21 1 2>/dev/null || true
+dmesg -n 1 2>/dev/null || true
+clear
+
 # First regular user created by the installer
 ADMIN=$(getent passwd 1000 | cut -d: -f1)
 
@@ -29,7 +34,7 @@ if [ ${#MENU[@]} -eq 0 ]; then
   exit 1
 fi
 
-DISK=$(whiptail --title "$TITLE" --menu "Select the disk for virtual machine files (VM disks, ISO images).\nIts data will be erased (VM files from a previous installation can be kept).\n\nThe system disk with Debian ($ROOT_DISK) is not listed." 20 78 10 \
+DISK=$(whiptail --title "$TITLE" --menu "Select the disk for virtual machine files (VM disks, ISO images).\nIts data will be erased (VM files from a previous installation can be kept).\n\nThe system disk with Debian ($ROOT_DISK) is not listed." 20 78 6 \
   "${MENU[@]}" 3>&1 1>&2 2>&3) || { echo "Cancelled. Run again: sudo kvm-setup"; exit 1; }
 
 # Encrypt the images disk only when the system disk is encrypted: its key file is stored there
