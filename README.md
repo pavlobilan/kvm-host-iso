@@ -101,6 +101,6 @@ cd kvm-host-iso
 | --- | --- |
 | `build-iso.sh` | Builds the ISO: embeds `preseed.cfg` into the installer initrd and adds the first-boot files |
 | `preseed.cfg` | Installer answers |
-| `encrypt.templates` | Installer question whether to encrypt the disks |
+| `installer.templates` | Installer texts: whether to encrypt the disks, and which disk is the system disk |
 | `kvm-setup.sh` | First-boot setup, installed as `/usr/local/sbin/kvm-setup` |
 | `kvm-setup.service` | Runs `kvm-setup` once on tty1 |

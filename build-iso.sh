@@ -11,7 +11,7 @@ set -euo pipefail
 
 REPO_RAW=${REPO_RAW:-https://raw.githubusercontent.com/pavlobilan/kvm-host-iso/main}
 URL=https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/
-FILES=(preseed.cfg kvm-setup.sh kvm-setup.service encrypt.templates)
+FILES=(preseed.cfg kvm-setup.sh kvm-setup.service installer.templates)
 OUTDIR=${OUTDIR:-/srv/kvm-iso}
 OWNER=${SUDO_USER:-$(id -un)}
 SUDO=; [ "$(id -u)" -eq 0 ] || SUDO=sudo
@@ -94,21 +94,17 @@ EXTRA="$WORK/initrd-extra"
 mkdir -p "$EXTRA/usr/share/kvm-host-iso"
 cp "$SRCDIR/preseed.cfg" "$EXTRA/preseed.cfg"
 
-# Encryption question: partman hook, copied to /lib/partman/init.d by preseed/early_command
-cp "$SRCDIR/encrypt.templates" "$EXTRA/usr/share/kvm-host-iso/encrypt.templates"
+# Encryption question and the system disk text: partman hook, copied to /lib/partman/init.d by preseed/early_command
+cp "$SRCDIR/installer.templates" "$EXTRA/usr/share/kvm-host-iso/installer.templates"
 cat > "$EXTRA/usr/share/kvm-host-iso/99kvm-encrypt" <<'HOOK'
 #!/bin/sh
-# Ask once (default No), or take the answer from encrypt.auto, and switch guided partitioning
-# between LVM and encrypted LVM
+# Load the custom texts (encryption question, system disk question), ask once whether to encrypt
+# (default No) and switch guided partitioning between LVM and encrypted LVM
 . /usr/share/debconf/confmodule
-if [ -f /usr/share/kvm-host-iso/encrypt.auto ]; then
-  [ "$(cat /usr/share/kvm-host-iso/encrypt.auto)" = yes ] && RET=true || RET=false
-else
-  db_x_loadtemplatefile /usr/share/kvm-host-iso/encrypt.templates kvm-host-iso || true
-  db_input critical kvm-host-iso/encrypt || true
-  db_go || true
-  db_get kvm-host-iso/encrypt
-fi
+db_x_loadtemplatefile /usr/share/kvm-host-iso/installer.templates d-i || true
+db_input critical kvm-host-iso/encrypt || true
+db_go || true
+db_get kvm-host-iso/encrypt
 if [ "$RET" = true ]; then
   db_set partman-auto/method crypto
   db_set partman-auto/init_automatically_partition some_device_crypto
