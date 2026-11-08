@@ -36,7 +36,10 @@ jobs:
         id: files
         run: |
           cd "$RUNNER_TEMP/iso"
+          # Name: debian-<version>-kvmhost-github-<build number>.iso
           iso=$(ls *-kvmhost.iso)
+          mv "$iso" "${iso%.iso}-github-${GITHUB_RUN_NUMBER}.iso"
+          iso="${iso%.iso}-github-${GITHUB_RUN_NUMBER}.iso"
           sha256sum "$iso" > SHA256SUMS
           echo "iso=$RUNNER_TEMP/iso/$iso" >> "$GITHUB_OUTPUT"
           echo "name=$iso" >> "$GITHUB_OUTPUT"
