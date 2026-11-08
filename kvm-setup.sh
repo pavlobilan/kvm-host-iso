@@ -132,12 +132,10 @@ mountpoint -q "$IMAGES" || mount "$IMAGES"
 usermod -aG libvirt "$ADMIN"
 usermod -aG libvirt libvirtdbus
 
-# Keep AppArmor for QEMU, but allow access to all files in the images directory: the per-VM profile
-# misses the backing files of external snapshots, so deleting a snapshot (block commit) is denied
-RULE="$IMAGES/** rwk,"
-LOCAL=/etc/apparmor.d/local/abstractions/libvirt-qemu
-mkdir -p "$(dirname "$LOCAL")"
-grep -qxF "$RULE" "$LOCAL" 2>/dev/null || echo "$RULE" >> "$LOCAL"
+# Disable AppArmor for QEMU: libvirt 11.3 in Debian 13 adds "deny w" rules for the backing files of
+# external snapshots, so deleting a snapshot (block commit) fails. Fixed upstream in libvirt 12.1.0;
+# remove this line once Debian ships it.
+grep -q '^security_driver' /etc/libvirt/qemu.conf || echo 'security_driver = "none"' >> /etc/libvirt/qemu.conf
 systemctl restart libvirtd
 
 # Pool "default" in the images directory, autostarted
