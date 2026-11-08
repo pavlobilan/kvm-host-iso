@@ -38,6 +38,7 @@ On the first boot:
 - the images disk formatted as ext4 (label `vmstore`) and mounted at `/var/lib/libvirt/images`;
 - libvirt storage pool `default`;
 - login on serial port `ttyS0`;
+- boot progress shown on the console (systemd status lines);
 - bridge `br0` under NetworkManager with the NIC's MAC and a MAC-based DHCP Client ID;
 - the Cockpit address with the IP and port on the console login screen.
 
