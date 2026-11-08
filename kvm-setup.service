@@ -6,8 +6,7 @@ Before=getty@tty1.service
 ConditionPathExists=!/var/lib/kvm-setup.done
 
 [Service]
-# idle: start after the other boot jobs, so their status lines do not cover the dialogs
-Type=idle
+Type=oneshot
 ExecStart=/usr/local/sbin/kvm-setup
 Environment=TERM=linux
 StandardInput=tty
