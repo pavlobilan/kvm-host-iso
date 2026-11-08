@@ -39,8 +39,6 @@ On the first boot:
 - libvirt storage pool `default`;
 - login on serial port `ttyS0`;
 - boot progress shown on the console (systemd status lines);
-- GRUB menu for 1 s and no TPM measurement in GRUB (on the Hyper-V virtual TPM it slows the boot by tens of seconds);
-- initrd with only the drivers of this machine (`MODULES=dep`), so GRUB loads it faster; after moving the system disk to other hardware, rebuild it with `MODULES=most`;
 - bridge `br0` under NetworkManager with the NIC's MAC and a MAC-based DHCP Client ID;
 - the Cockpit address with the IP and port on the console login screen.
 
