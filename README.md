@@ -39,6 +39,7 @@ On the first boot:
 - libvirt storage pool `default`;
 - login on serial port `ttyS0`;
 - boot progress shown on the console (systemd status lines);
+- GRUB menu of the installed system shown for 2 s;
 - bridge `br0` under NetworkManager with the NIC's MAC and a MAC-based DHCP Client ID;
 - the Cockpit address with the IP and port on the console login screen.
 
