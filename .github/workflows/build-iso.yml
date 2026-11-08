@@ -1,0 +1,54 @@
+# Builds the KVM host ISO and publishes it as the only release "iso" (the previous one is replaced).
+name: Build ISO
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - build-iso.sh
+      - preseed.cfg
+      - installer.templates
+      - kvm-setup.sh
+      - kvm-setup.service
+      - .github/workflows/build-iso.yml
+  schedule:
+    # Weekly, to pick up new Debian point releases
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-iso
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the ISO
+        run: OUTDIR="$RUNNER_TEMP/iso" bash ./build-iso.sh </dev/null
+
+      - name: Prepare the release files
+        id: files
+        run: |
+          cd "$RUNNER_TEMP/iso"
+          iso=$(ls *-kvmhost.iso)
+          sha256sum "$iso" > SHA256SUMS
+          echo "iso=$RUNNER_TEMP/iso/$iso" >> "$GITHUB_OUTPUT"
+          echo "name=$iso" >> "$GITHUB_OUTPUT"
+          echo "sums=$RUNNER_TEMP/iso/SHA256SUMS" >> "$GITHUB_OUTPUT"
+
+      - name: Replace the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete iso --cleanup-tag --yes || true
+          gh release create iso "${{ steps.files.outputs.iso }}" "${{ steps.files.outputs.sums }}" \
+            --target "$GITHUB_SHA" \
+            --title "${{ steps.files.outputs.name }}" \
+            --notes "KVM host installation ISO built from commit $GITHUB_SHA. Check the download with SHA256SUMS." \
+            --latest
