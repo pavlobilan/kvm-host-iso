@@ -55,3 +55,20 @@ jobs:
             --title "${{ steps.files.outputs.name }}" \
             --notes "KVM host installation ISO built from commit $GITHUB_SHA. Check the download with SHA256SUMS." \
             --latest
+
+      - name: Update the ISO link in README
+        env:
+          NAME: ${{ steps.files.outputs.name }}
+        run: |
+          base="https://github.com/${GITHUB_REPOSITORY}/releases/download/iso"
+          line="**Latest ISO:** [${NAME}](${base}/${NAME}) ([SHA256SUMS](${base}/SHA256SUMS))"
+          awk -v line="$line" '
+            /<!-- iso-link-start -->/ { print; print line; skip = 1; next }
+            /<!-- iso-link-end -->/   { skip = 0 }
+            !skip { print }' README.md > README.new && mv README.new README.md
+          git diff --quiet README.md && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "README: link to ${NAME}"
+          git pull --rebase origin main
+          git push origin HEAD:main
