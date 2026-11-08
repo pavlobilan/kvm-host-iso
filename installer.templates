@@ -9,6 +9,4 @@ Template: partman-auto/select_disk
 Type: select
 Choices-C: ${CHOICES}
 Choices: ${DESCRIPTIONS}
-Description: Select the system disk to install Debian on:
- All data on the selected disk will be erased. The disk for virtual
- machine files is selected separately on the first boot.
+Description: Select the system disk for Debian (all its data will be erased):
