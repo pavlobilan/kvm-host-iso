@@ -96,6 +96,22 @@ cp "$SRCDIR/preseed.cfg" "$EXTRA/preseed.cfg"
 
 # Encryption question and the system disk text: partman hook, copied to /lib/partman/init.d by preseed/early_command
 cp "$SRCDIR/installer.templates" "$EXTRA/usr/share/kvm-host-iso/installer.templates"
+# GRUB on the selected system disk: partman hook, copied to /lib/partman/finish.d by preseed/early_command
+cat > "$EXTRA/usr/share/kvm-host-iso/99kvm-bootdev" <<'HOOK'
+#!/bin/sh
+# Install GRUB on the disk selected as the system disk, not on "the first disk" (sda/sdb order can change)
+. /usr/share/debconf/confmodule
+db_get partman-auto/select_disk || exit 0
+dir=$RET
+if [ -f "$dir/device" ]; then
+  dev=$(cat "$dir/device")
+else
+  dev=$(basename "$dir" | sed 's,=,/,g')
+fi
+case $dev in /dev/*) db_set grub-installer/bootdev "$dev" ;; esac
+exit 0
+HOOK
+
 cat > "$EXTRA/usr/share/kvm-host-iso/99kvm-encrypt" <<'HOOK'
 #!/bin/sh
 # Load the custom texts (encryption question, system disk question), ask once whether to encrypt
