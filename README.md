@@ -1,12 +1,8 @@
 # kvm-host-iso
 
+**[Download the ready ISO](https://github.com/pavlobilan/kvm-host-iso/releases/latest)**: updated automatically after every change of the scripts and weekly with the latest Debian stable release. Only the latest build is kept; check the download with `SHA256SUMS` from the same page.
+
 Builds a Debian ISO that installs a KVM host.
-
-## Download
-
-A ready ISO is built automatically after every change and weekly, and published on the
-[Releases page](https://github.com/pavlobilan/kvm-host-iso/releases/latest) (only the latest build is kept).
-Check the download with `SHA256SUMS` from the same page.
 
 ## Build it yourself
 
