@@ -41,6 +41,7 @@ On the first boot:
 - KVM, libvirt, Cockpit;
 - the images disk formatted as ext4 (label `vmstore`) and mounted at `/var/lib/libvirt/images`;
 - libvirt storage pool `default`;
+- AppArmor for QEMU stays on; VMs may access all files in `/var/lib/libvirt/images`, so deleting external snapshots works;
 - login on serial port `ttyS0`;
 - boot progress shown on the console (systemd status lines);
 - GRUB menu of the installed system shown for 2 s;
