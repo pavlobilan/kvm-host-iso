@@ -1,7 +1,7 @@
 # kvm-host-iso
 
 <!-- iso-link-start -->
-**Latest ISO:** [debian-13.7.0-kvmhost-github-v6.iso](https://github.com/pavlobilan/kvm-host-iso/releases/download/iso/debian-13.7.0-kvmhost-github-v6.iso) ([SHA256SUMS](https://github.com/pavlobilan/kvm-host-iso/releases/download/iso/SHA256SUMS))
+**Latest ISO:** [debian-13.7.0-kvmhost-github-v7.iso](https://github.com/pavlobilan/kvm-host-iso/releases/download/iso/debian-13.7.0-kvmhost-github-v7.iso) ([SHA256SUMS](https://github.com/pavlobilan/kvm-host-iso/releases/download/iso/SHA256SUMS))
 <!-- iso-link-end -->
 
 The ISO is [rebuilt automatically](https://github.com/pavlobilan/kvm-host-iso/releases/latest) after every change of the scripts and weekly with the latest Debian stable release; the link above is updated with it. The file is named `debian-<version>-kvmhost-github-v<build number>.iso`. Only the latest build is kept; check the download with `SHA256SUMS` from the same page.
