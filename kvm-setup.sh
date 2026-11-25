@@ -194,4 +194,6 @@ whiptail --title "$TITLE" --ok-button "Reboot" --msgbox "Setup complete.\n\n\
 Reserve an IP on the router for MAC $MAC\n\
 and clear the Client ID field.\n\n\
 Then press Enter to reboot." 13 70 >&3 2>&4
+# Clear the dialog, so the shutdown messages do not appear under it
+progress "Rebooting..."
 reboot
