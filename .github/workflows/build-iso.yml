@@ -1,5 +1,5 @@
 # Builds the KVM host ISO and publishes every build as a new release v<build number>;
-# releases older than 90 days are deleted.
+# releases older than 90 days are deleted, but the 3 newest releases are always kept.
 name: Build ISO
 
 on:
@@ -58,7 +58,7 @@ jobs:
             --notes "KVM host installation ISO built from commit $GITHUB_SHA. Check the download with SHA256SUMS." \
             --latest
 
-      - name: Delete releases older than 90 days
+      - name: Delete releases older than 90 days, keep the 3 newest
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.files.outputs.tag }}
@@ -66,13 +66,13 @@ jobs:
           # The single release "iso" of the earlier scheme is replaced by the v<N> releases
           gh release delete iso --cleanup-tag --yes 2>/dev/null || true
           cutoff=$(date -u -d '90 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          # All v<N> releases, newest first; the first 3 are kept whatever their age
           gh api --paginate "repos/${GITHUB_REPOSITORY}/releases" \
-            --jq ".[] | select(.created_at < \"$cutoff\") | .tag_name" |
-          while read -r old; do
-            case $old in
-              "$TAG") ;;
-              v[0-9]*) echo "Deleting $old"; gh release delete "$old" --cleanup-tag --yes ;;
-            esac
+            --jq '.[] | select(.tag_name | test("^v[0-9]+$")) | [.created_at, .tag_name] | @tsv' |
+          sort -r | tail -n +4 |
+          while IFS=$'\t' read -r created old; do
+            [ "$old" = "$TAG" ] && continue
+            if [[ $created < $cutoff ]]; then echo "Deleting $old ($created)"; gh release delete "$old" --cleanup-tag --yes; fi
           done
 
       - name: Update the ISO link in README

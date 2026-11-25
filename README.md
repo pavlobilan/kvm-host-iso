@@ -4,7 +4,7 @@
 **Latest ISO:** [debian-13.8.0-kvmhost-github-v12.iso](https://github.com/pavlobilan/kvm-host-iso/releases/download/v12/debian-13.8.0-kvmhost-github-v12.iso) ([SHA256SUMS](https://github.com/pavlobilan/kvm-host-iso/releases/download/v12/SHA256SUMS))
 <!-- iso-link-end -->
 
-The ISO is [rebuilt automatically](https://github.com/pavlobilan/kvm-host-iso/releases/latest) after every change of the scripts and weekly with the latest Debian stable release; the link above is updated with it. The file is named `debian-<version>-kvmhost-github-v<build number>.iso`. Every build is a separate [release](https://github.com/pavlobilan/kvm-host-iso/releases) (`v<build number>`); releases older than 3 months are deleted. Check the download with `SHA256SUMS` from the same release.
+The ISO is [rebuilt automatically](https://github.com/pavlobilan/kvm-host-iso/releases/latest) after every change of the scripts and weekly with the latest Debian stable release; the link above is updated with it. The file is named `debian-<version>-kvmhost-github-v<build number>.iso`. Every build is a separate [release](https://github.com/pavlobilan/kvm-host-iso/releases) (`v<build number>`); releases older than 3 months are deleted, but the 3 newest are always kept. Check the download with `SHA256SUMS` from the same release.
 
 Builds a Debian ISO that installs a KVM host.
 
