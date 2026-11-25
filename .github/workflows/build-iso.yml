@@ -1,4 +1,5 @@
-# Builds the KVM host ISO and publishes it as the only release "iso" (the previous one is replaced).
+# Builds the KVM host ISO and publishes every build as a new release v<build number>;
+# releases older than 90 days are deleted.
 name: Build ISO
 
 on:
@@ -44,23 +45,42 @@ jobs:
           echo "iso=$RUNNER_TEMP/iso/$iso" >> "$GITHUB_OUTPUT"
           echo "name=$iso" >> "$GITHUB_OUTPUT"
           echo "sums=$RUNNER_TEMP/iso/SHA256SUMS" >> "$GITHUB_OUTPUT"
+          echo "tag=v${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
-      - name: Replace the release
+      - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.files.outputs.tag }}
         run: |
-          gh release delete iso --cleanup-tag --yes || true
-          gh release create iso "${{ steps.files.outputs.iso }}" "${{ steps.files.outputs.sums }}" \
+          gh release create "$TAG" "${{ steps.files.outputs.iso }}" "${{ steps.files.outputs.sums }}" \
             --target "$GITHUB_SHA" \
             --title "${{ steps.files.outputs.name }}" \
             --notes "KVM host installation ISO built from commit $GITHUB_SHA. Check the download with SHA256SUMS." \
             --latest
 
+      - name: Delete releases older than 90 days
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.files.outputs.tag }}
+        run: |
+          # The single release "iso" of the earlier scheme is replaced by the v<N> releases
+          gh release delete iso --cleanup-tag --yes 2>/dev/null || true
+          cutoff=$(date -u -d '90 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/releases" \
+            --jq ".[] | select(.created_at < \"$cutoff\") | .tag_name" |
+          while read -r old; do
+            case $old in
+              "$TAG") ;;
+              v[0-9]*) echo "Deleting $old"; gh release delete "$old" --cleanup-tag --yes ;;
+            esac
+          done
+
       - name: Update the ISO link in README
         env:
           NAME: ${{ steps.files.outputs.name }}
+          TAG: ${{ steps.files.outputs.tag }}
         run: |
-          base="https://github.com/${GITHUB_REPOSITORY}/releases/download/iso"
+          base="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}"
           line="**Latest ISO:** [${NAME}](${base}/${NAME}) ([SHA256SUMS](${base}/SHA256SUMS))"
           awk -v line="$line" '
             /<!-- iso-link-start -->/ { print; print line; skip = 1; next }
