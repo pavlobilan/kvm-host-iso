@@ -6,6 +6,7 @@ set -euo pipefail
 IMAGES=/var/lib/libvirt/images
 DONE=/var/lib/kvm-setup.done
 TITLE="KVM host setup"
+LOG=/var/log/kvm-setup.log
 
 [ "$(id -u)" -eq 0 ] || { echo "Run as root: sudo $0" >&2; exit 1; }
 [ -e "$DONE" ] && { echo "Setup already completed ($DONE)."; exit 0; }
@@ -14,6 +15,12 @@ TITLE="KVM host setup"
 kill -s SIGRTMIN+21 1 2>/dev/null || true
 dmesg -n 1 2>/dev/null || true
 clear
+
+# Keep the console on fd 3/4: after the questions, command output goes to $LOG, so it does not
+# draw over the last dialog; dialogs and errors are still shown on the console
+exec 3>&1 4>&2
+progress() { clear >&3; whiptail --title "$TITLE" --infobox "$1" 8 60 >&3 2>&4; }
+trap 'clear >&3; whiptail --title "$TITLE" --msgbox "Setup failed (line $LINENO).\n\nDetails: $LOG\nRun again: sudo kvm-setup" 11 60 >&3 2>&4' ERR
 
 # First regular user created by the installer
 ADMIN=$(getent passwd 1000 | cut -d: -f1)
@@ -74,12 +81,27 @@ if [ -n "$PART" ]; then
   fi
 fi
 
-if [ "$KEEP" = no ]; then
+if [ "$KEEP" = yes ] && [ "$PTYPE" = crypto_LUKS ]; then
+  # Existing encrypted partition: its passphrase is needed to add the new key file
+  while true; do
+    PASS=$(whiptail --title "$TITLE" --passwordbox "Passphrase of the existing VM images disk $PART:" 10 70 3>&1 1>&2 2>&3) \
+      || { echo "Cancelled. Run again: sudo kvm-setup"; exit 1; }
+    printf '%s' "$PASS" | cryptsetup open --test-passphrase --key-file=- "$PART" 2>/dev/null && break
+    whiptail --title "$TITLE" --msgbox "Wrong passphrase." 8 50
+  done
+elif [ "$KEEP" = no ]; then
   whiptail --title "$TITLE" --defaultno --yesno "ALL DATA on $DISK will be erased.\n\nContinue?" 10 70 \
     || { echo "Cancelled. Run again: sudo kvm-setup"; exit 1; }
   if [ "$ENCRYPT" = yes ]; then
     ask_new_passphrase || { echo "Cancelled. Run again: sudo kvm-setup"; exit 1; }
   fi
+fi
+
+# No more questions: from here on, command output goes to the log, progress is shown in a box
+exec >>"$LOG" 2>&1
+progress "Preparing the disk for VM files..."
+
+if [ "$KEEP" = no ]; then
   # Wipe old signatures (VMFS etc.) and create GPT with one partition
   wipefs -a "$DISK"
   parted -s "$DISK" mklabel gpt mkpart vmstore ext4 0% 100%
@@ -93,14 +115,6 @@ if [ "$KEEP" = no ]; then
     mkfs.ext4 -q -F -L vmstore "$PART"
     PTYPE=ext4
   fi
-elif [ "$PTYPE" = crypto_LUKS ]; then
-  # Existing encrypted partition: its passphrase is needed to add the new key file
-  while true; do
-    PASS=$(whiptail --title "$TITLE" --passwordbox "Passphrase of the existing VM images disk $PART:" 10 70 3>&1 1>&2 2>&3) \
-      || { echo "Cancelled. Run again: sudo kvm-setup"; exit 1; }
-    printf '%s' "$PASS" | cryptsetup open --test-passphrase --key-file=- "$PART" && break
-    whiptail --title "$TITLE" --msgbox "Wrong passphrase." 8 50
-  done
 fi
 
 if [ "$PTYPE" = crypto_LUKS ]; then
@@ -127,6 +141,8 @@ cp -n /etc/fstab /etc/fstab.bak
 grep -q "^$FSDEV " /etc/fstab || echo "$FSDEV $IMAGES ext4 defaults 0 2" >> /etc/fstab
 systemctl daemon-reload
 mountpoint -q "$IMAGES" || mount "$IMAGES"
+
+progress "Configuring libvirt and the network..."
 
 # libvirt access for the user and for Cockpit
 usermod -aG libvirt "$ADMIN"
@@ -172,8 +188,10 @@ touch "$DONE"
 systemctl disable kvm-setup.service 2>/dev/null || true
 
 # Wait (no timeout) until the IP is reserved on the router, then reboot so br0 gets the reserved IP
+trap - ERR
+clear >&3
 whiptail --title "$TITLE" --ok-button "Reboot" --msgbox "Setup complete.\n\n\
 Reserve an IP on the router for MAC $MAC\n\
 and clear the Client ID field.\n\n\
-Then press Enter to reboot." 13 70
+Then press Enter to reboot." 13 70 >&3 2>&4
 reboot
